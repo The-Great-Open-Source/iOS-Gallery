@@ -102,6 +102,8 @@ final class DragSelectController: NSObject, UIGestureRecognizerDelegate {
     private var autoScroll: CADisplayLink?
     private var globalPoint: CGPoint = .zero
     private var active = false
+    private var pausedRecognizers: [UIGestureRecognizer] = []
+    private var pausedScrollViews: [(UIScrollView, Bool)] = []
 
     override init() {
         super.init()
@@ -153,7 +155,15 @@ final class DragSelectController: NSObject, UIGestureRecognizerDelegate {
         return true
     }
 
-    func gestureRecognizer(_ a: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith b: UIGestureRecognizer) -> Bool { true }
+    func gestureRecognizer(_ a: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith b: UIGestureRecognizer) -> Bool {
+        // Only cooperate with the page's own scroll view; everything else must not fire together with us.
+        b === attached?.panGestureRecognizer || a === attached?.panGestureRecognizer
+    }
+
+    /// Other pans (tab swiping, interactive back swipe…) must wait until our sideways pan has decided.
+    func gestureRecognizer(_ a: UIGestureRecognizer, shouldBeRequiredToFailBy b: UIGestureRecognizer) -> Bool {
+        isEnabled && a === pan && b is UIPanGestureRecognizer && b !== attached?.panGestureRecognizer
+    }
 
     // MARK: Handling
 
@@ -166,6 +176,7 @@ final class DragSelectController: NSObject, UIGestureRecognizerDelegate {
             if recognizer === hold { Haptics.impact(.light) }
             active = true
             attached?.isScrollEnabled = false
+            pauseAncestors()
             startAutoScroll()
             onBegin?(local)
         case .changed:
@@ -181,7 +192,31 @@ final class DragSelectController: NSObject, UIGestureRecognizerDelegate {
         active = false
         autoScroll?.invalidate(); autoScroll = nil
         attached?.isScrollEnabled = true
+        resumeAncestors()
         if wasActive { onEnd?() }
+    }
+
+    // MARK: Pausing competing gestures
+
+    /// While selecting, nothing above the grid may react to the same swipe (tab paging, back swipe, outer scrolling).
+    private func pauseAncestors() {
+        resumeAncestors()
+        var view = attached?.superview
+        while let current = view {
+            if let scroll = current as? UIScrollView { pausedScrollViews.append((scroll, scroll.isScrollEnabled)); scroll.isScrollEnabled = false }
+            for g in current.gestureRecognizers ?? [] where g is UIPanGestureRecognizer && g !== pan && g.isEnabled {
+                g.isEnabled = false
+                pausedRecognizers.append(g)
+            }
+            view = current.superview
+        }
+    }
+
+    private func resumeAncestors() {
+        pausedRecognizers.forEach { $0.isEnabled = true }
+        pausedRecognizers = []
+        pausedScrollViews.forEach { $0.0.isScrollEnabled = $0.1 }
+        pausedScrollViews = []
     }
 
     // MARK: Auto-scroll near the edges
