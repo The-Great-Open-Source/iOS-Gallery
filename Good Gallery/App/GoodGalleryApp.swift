@@ -9,7 +9,8 @@ struct GoodGalleryApp: App {
     @StateObject private var searchIndex = MediaSearchIndex()
 
     init() {
-        let schema = Schema([MediaCollection.self, CollectionMedia.self, FavoriteMedia.self, CompressionRecord.self])
+        let schema = Schema([MediaCollection.self, CollectionMedia.self, FavoriteMedia.self, CompressionRecord.self,
+                              BackupRecord.self, PhotoTags.self])
         // Make sure Application Support exists so SwiftData can create its store on first launch.
         if let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
             try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)

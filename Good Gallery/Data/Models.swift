@@ -12,6 +12,8 @@ final class MediaCollection {
     var updatedAt: Date
     var sortOrder: Int
     var sortModeRaw: String
+    /// When true, new items in this collection are uploaded to Google Drive automatically.
+    var autoBackupDrive: Bool = false
 
     @Relationship(deleteRule: .cascade, inverse: \CollectionMedia.collection)
     var items: [CollectionMedia] = []
@@ -98,5 +100,33 @@ enum MediaSort: String, CaseIterable, Identifiable {
         case .takenNewest: "Newest Photos First"
         case .takenOldest: "Oldest Photos First"
         }
+    }
+}
+
+/// Remembers which asset was already sent where, so nothing is uploaded twice.
+@Model
+final class BackupRecord {
+    var destination: String            // "drive" | "telegram"
+    var photoKitLocalIdentifier: String
+    var createdAt: Date
+    init(destination: String, identifier: String) {
+        self.destination = destination
+        self.photoKitLocalIdentifier = identifier
+        self.createdAt = .now
+    }
+}
+
+/// On-device image labels from Apple's Vision classifier, used for smart search.
+@Model
+final class PhotoTags {
+    @Attribute(.unique) var photoKitLocalIdentifier: String
+    var labels: [String]
+    var scores: [Float]
+    var indexedAt: Date
+    init(identifier: String, labels: [String], scores: [Float]) {
+        self.photoKitLocalIdentifier = identifier
+        self.labels = labels
+        self.scores = scores
+        self.indexedAt = .now
     }
 }
