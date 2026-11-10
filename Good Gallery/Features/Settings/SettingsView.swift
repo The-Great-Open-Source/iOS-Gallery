@@ -65,6 +65,10 @@ struct SettingsView: View {
                     }
                 }
 
+                Section {
+                    NavigationLink("Backup") { BackupSettingsView() }
+                }
+
                 Section("About") {
                     NavigationLink("Privacy Policy") { PrivacyPolicyView() }
                     NavigationLink("About Good Gallery") { AboutView() }
@@ -99,11 +103,11 @@ struct PrivacyPolicyView: View {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Privacy").font(.largeTitle.weight(.bold)).foregroundStyle(GG.Palette.text)
                 block("Your media stays on your device",
-                      "Good Gallery never uploads, transmits, or shares your photos or videos. All organising, searching, and video compression happens locally.")
+                      "Good Gallery does not upload your photos or videos on its own. Organising, searching and video compression all happen on this device. The only exception is Backup, which is off by default: if you turn it on, files you choose are sent directly from your phone to your own Google Drive or your own Telegram chat. Nothing passes through any server of ours.")
                 block("What we store",
                       "Only lightweight metadata: your collection names, descriptions, which photos you placed in each collection (as references to your Photos library), your Good Gallery favorites, and a short history of video compressions. This data lives only on this device.")
                 block("What we never do",
-                      "No accounts, no analytics, no advertising, no tracking, and no third-party SDKs. We don't collect personal information.")
+                      "No accounts, no analytics, no advertising, no tracking, and no third-party SDKs. We don't collect personal information. Your Telegram bot token and Google sign-in are stored only in this device's Keychain.")
                 block("Photos permission",
                       "Good Gallery asks for access to your photo library so it can display your photos. You can grant Limited Access to share only selected photos, and change this at any time in iOS Settings. Removing a photo from a collection never deletes it. The only time Good Gallery can delete a photo is when you explicitly choose “Delete Original” after compressing a video, and iOS asks you to confirm.")
                 block("Location", "If a photo contains location metadata, the Media Inspector shows its coordinates. They're read on-device and never sent anywhere.")

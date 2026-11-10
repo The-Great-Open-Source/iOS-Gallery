@@ -20,6 +20,7 @@ struct CollectionDetailView: View {
     @State private var showEdit = false
     @State private var showCoverPicker = false
     @State private var showStats = false
+    @State private var showBackup = false
     @State private var showAddTo = false
     @State private var confirmDelete = false
     @State private var confirmRemoveSelected = false
@@ -92,6 +93,7 @@ struct CollectionDetailView: View {
         .sheet(isPresented: $showStats) {
             CollectionStatsSheet(collection: collection, assets: resolved.assets, missing: resolved.missingIdentifiers.count)
         }
+        .sheet(isPresented: $showBackup) { BackupSheet(assets: resolved.assets, folderName: collection.name) }
         .sheet(isPresented: $showAddTo) {
             AddToCollectionSheet(identifiers: Array(selection)) {
                 withAnimation(.snappy) { selecting = false; selection = [] }
@@ -174,6 +176,8 @@ struct CollectionDetailView: View {
                     Button { showEdit = true } label: { Label("Rename & Describe", systemImage: "pencil") }
                     Button { showCoverPicker = true } label: { Label("Change Cover", systemImage: "photo") }
                     Button { showStats = true } label: { Label("Statistics", systemImage: "chart.bar") }
+                    Button { showBackup = true } label: { Label("Back Up…", systemImage: "icloud.and.arrow.up") }
+                        .disabled(resolved.assets.isEmpty)
                     Divider()
                     Button(role: .destructive) { confirmDelete = true } label: { Label("Delete Collection", systemImage: "trash") }
                 } label: { Image(systemName: "ellipsis.circle") }
