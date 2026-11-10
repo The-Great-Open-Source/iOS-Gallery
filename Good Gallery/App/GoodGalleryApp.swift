@@ -24,7 +24,6 @@ struct GoodGalleryApp: App {
         }
         self.container = container
         _store = StateObject(wrappedValue: CollectionStore(context: container.mainContext))
-        Self.configureAppearance()
     }
 
     var body: some Scene {
@@ -35,34 +34,5 @@ struct GoodGalleryApp: App {
                 .environmentObject(searchIndex)
                 .modelContainer(container)
         }
-    }
-
-    private static func configureAppearance() {
-        if #unavailable(iOS 26.0) {
-        let tab = UITabBarAppearance()
-        tab.configureWithDefaultBackground()
-        tab.backgroundColor = UIColor(GG.Palette.background).withAlphaComponent(0.85)
-        tab.shadowColor = UIColor(GG.Palette.separator)
-        let normal = UIColor(GG.Palette.secondaryText)
-        let selected = UIColor(GG.Palette.accent)
-        for item in [tab.stackedLayoutAppearance, tab.inlineLayoutAppearance, tab.compactInlineLayoutAppearance] {
-            item.normal.iconColor = normal
-            item.normal.titleTextAttributes = [.foregroundColor: normal]
-            item.selected.iconColor = selected
-            item.selected.titleTextAttributes = [.foregroundColor: selected]
-        }
-        UITabBar.appearance().standardAppearance = tab
-        UITabBar.appearance().scrollEdgeAppearance = tab
-        }
-
-        let nav = UINavigationBarAppearance()
-        nav.configureWithTransparentBackground()
-        nav.titleTextAttributes = [.foregroundColor: UIColor(GG.Palette.text)]
-        nav.largeTitleTextAttributes = [
-            .foregroundColor: UIColor(GG.Palette.text),
-            .font: UIFont(descriptor: UIFont.systemFont(ofSize: 34, weight: .regular).fontDescriptor.withDesign(.serif)!, size: 34)
-        ]
-        UINavigationBar.appearance().standardAppearance = nav
-        UINavigationBar.appearance().scrollEdgeAppearance = nav
     }
 }

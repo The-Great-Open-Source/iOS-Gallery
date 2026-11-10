@@ -17,7 +17,7 @@ struct SettingsView: View {
     @EnvironmentObject private var library: PhotoLibrary
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
-    @AppStorage("appearance") private var appearanceRaw = AppearancePreference.dark.rawValue
+    @AppStorage("appearance") private var appearanceRaw = AppearancePreference.system.rawValue
     @State private var scratchBytes: Int64 = 0
     @State private var databaseBytes: Int64 = 0
     @State private var cacheCleared = false
@@ -42,7 +42,6 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.segmented)
                 }
-                .listRowBackground(GlassRowBackground())
 
                 Section {
                     LabeledContent("Photos access", value: statusText)
@@ -53,7 +52,6 @@ struct SettingsView: View {
                 } header: { Text("Photo Library") } footer: {
                     Text("Good Gallery reads your photos to show and organise them. It never copies, uploads, or modifies your originals.")
                 }
-                .listRowBackground(GlassRowBackground())
 
                 Section("Storage & Cache") {
                     LabeledContent("Collections database", value: Format.bytes(databaseBytes))
@@ -66,7 +64,6 @@ struct SettingsView: View {
                         refreshSizes()
                     }
                 }
-                .listRowBackground(GlassRowBackground())
 
                 Section("About") {
                     NavigationLink("Privacy Policy") { PrivacyPolicyView() }
@@ -76,16 +73,13 @@ struct SettingsView: View {
                     }
                     LabeledContent("Version", value: AppInfo.version)
                 }
-                .listRowBackground(GlassRowBackground())
             }
-            .foregroundStyle(GG.Palette.text)
-            .ggScreen()
+            .tint(GG.Palette.accent)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .onAppear { refreshSizes() }
         }
-        .presentationBackground { GGBackground() }
     }
 
     private func refreshSizes() {
@@ -103,7 +97,7 @@ struct PrivacyPolicyView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Privacy").font(GG.Typography.editorial(32)).foregroundStyle(GG.Palette.text)
+                Text("Privacy").font(.largeTitle.weight(.bold)).foregroundStyle(GG.Palette.text)
                 block("Your media stays on your device",
                       "Good Gallery never uploads, transmits, or shares your photos or videos. All organising, searching, and video compression happens locally.")
                 block("What we store",
@@ -134,8 +128,7 @@ struct AboutView: View {
         VStack(spacing: 14) {
             Spacer()
             Image(systemName: "photo.stack").font(.system(size: 50, weight: .ultraLight)).foregroundStyle(GG.Palette.accent)
-            Text("Good Gallery").font(GG.Typography.editorial(38, weight: .medium)).foregroundStyle(GG.Palette.text)
-            Text("A better home for your memories.").font(GG.Typography.editorial(17)).italic().foregroundStyle(GG.Palette.accent)
+            Text("Good Gallery").font(.largeTitle.weight(.bold)).foregroundStyle(GG.Palette.text)
             Text("Organise your existing photos and videos into collections that reflect your life — without moving or duplicating a single file.")
                 .font(.subheadline).foregroundStyle(GG.Palette.secondaryText).multilineTextAlignment(.center)
                 .padding(.horizontal, 36).padding(.top, 8)

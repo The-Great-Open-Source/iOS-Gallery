@@ -4,9 +4,9 @@ import SwiftData
 
 struct RootView: View {
     @EnvironmentObject private var library: PhotoLibrary
-    @AppStorage("appearance") private var appearanceRaw = AppearancePreference.dark.rawValue
+    @AppStorage("appearance") private var appearanceRaw = AppearancePreference.system.rawValue
 
-    private var appearance: AppearancePreference { AppearancePreference(rawValue: appearanceRaw) ?? .dark }
+    private var appearance: AppearancePreference { AppearancePreference(rawValue: appearanceRaw) ?? .system }
 
     var body: some View {
         Group {
@@ -91,15 +91,11 @@ struct WelcomeView: View {
                 Spacer()
                 VStack(spacing: 14) {
                     Image(systemName: "photo.stack")
-                        .font(.system(size: 44, weight: .ultraLight))
+                        .font(.system(size: 56, weight: .light))
                         .foregroundStyle(GG.Palette.accent)
                     Text("Good Gallery")
-                        .font(GG.Typography.editorial(44, weight: .medium))
+                        .font(.largeTitle.weight(.bold))
                         .foregroundStyle(GG.Palette.text)
-                    Text("A better home for your memories.")
-                        .font(GG.Typography.editorial(18))
-                        .italic()
-                        .foregroundStyle(GG.Palette.accent)
                 }
                 Spacer()
                 VStack(alignment: .leading, spacing: 18) {
