@@ -8,6 +8,7 @@ struct GoodGalleryApp: App {
     @StateObject private var library = PhotoLibrary()
     @StateObject private var store: CollectionStore
     @StateObject private var backup: BackupEngine
+    @StateObject private var tagIndexer: PhotoTagIndexer
     @Environment(\.scenePhase) private var scenePhase
     static let backupTaskID = "com.harshanacz.Good-Gallery.backup"
     @StateObject private var searchIndex = MediaSearchIndex()
@@ -30,6 +31,7 @@ struct GoodGalleryApp: App {
         self.container = container
         let store = CollectionStore(context: container.mainContext)
         _store = StateObject(wrappedValue: store)
+        _tagIndexer = StateObject(wrappedValue: PhotoTagIndexer(container: container))
         let engine = BackupEngine(store: store)
         _backup = StateObject(wrappedValue: engine)
         BackupSettings.register()
@@ -50,6 +52,7 @@ struct GoodGalleryApp: App {
                 .environmentObject(store)
                 .environmentObject(searchIndex)
                 .environmentObject(backup)
+                .environmentObject(tagIndexer)
                 .modelContainer(container)
                 .onChange(of: scenePhase) { _, phase in
                     switch phase {

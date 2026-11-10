@@ -9,11 +9,14 @@ struct SearchView: View {
     @Query(sort: \MediaCollection.sortOrder) private var collections: [MediaCollection]
     @StateObject private var albums = AlbumsModel()
     @StateObject private var resolved = ResolvedAssets()
+    @StateObject private var semantic = ResolvedAssets()
+    @EnvironmentObject private var tagIndexer: PhotoTagIndexer
 
     @State private var query = ""
     @State private var viewer: ViewerContext?
     @State private var openCollection: MediaCollection?
     @State private var openAlbum: AlbumInfo?
+    @State private var viewerSemantic: ViewerContext?
     @FocusState private var focused: Bool
 
     private var trimmed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -30,10 +33,10 @@ struct SearchView: View {
             ScrollView {
                 if trimmed.isEmpty {
                     EmptyStateView(icon: "magnifyingglass", title: "Search Good Gallery",
-                                   message: "Find collections, Apple Photos albums, file names, months and years (“June 2025”), or types like “video” and “screenshot”.")
+                                   message: "Describe what you're looking for, like “sunny days”, “beach” or “food”.")
                         .padding(.top, 60)
-                } else if matchedCollections.isEmpty && matchedAlbums.isEmpty && mediaHits.isEmpty {
-                    if index.isIndexing {
+                } else if matchedCollections.isEmpty && matchedAlbums.isEmpty && mediaHits.isEmpty && semantic.assets.isEmpty {
+                    if index.isIndexing || tagIndexer.isIndexing {
                         ProgressView("Searching your library…").tint(GG.Palette.accent).padding(.top, 80)
                     } else {
                         EmptyStateView(icon: "magnifyingglass", title: "No Results", message: "Nothing matched “\(trimmed)”.")
@@ -59,6 +62,16 @@ struct SearchView: View {
                                 }
                             }
                         }
+                        if !semantic.assets.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                SectionHeader(title: "Matching Photos",
+                                              trailing: tagIndexer.isIndexing ? "Analysing \(tagIndexer.indexed.formatted()) of \(tagIndexer.total.formatted())" : nil)
+                                AssetGrid(assets: semantic.assets, isSelecting: false, selection: .constant([])) { i in
+                                    viewerSemantic = ViewerContext(assets: semantic.assets, index: i)
+                                }
+                                .padding(.horizontal, -GG.Spacing.page)
+                            }
+                        }
                         if !mediaHits.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
                                 SectionHeader(title: "Photos & Videos", trailing: index.isIndexing ? "Still indexing…" : nil)
@@ -76,21 +89,30 @@ struct SearchView: View {
             .navigationTitle("Search")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
-                        prompt: "Collections, albums, files, dates")
+                        prompt: "Search photos, e.g. “sunny days”")
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .navigationDestination(item: $openCollection) { CollectionDetailView(collection: $0) }
             .navigationDestination(item: $openAlbum) { AlbumDetailView(album: $0) }
             .task { await albums.load() }
             .task(id: library.changeToken) { index.buildIfNeeded(changeToken: library.changeToken) }
+            .task(id: SemanticKey(query: trimmed, revision: tagIndexer.revision / 5)) {
+                try? await Task.sleep(for: .milliseconds(250))     // debounce typing
+                guard !Task.isCancelled else { return }
+                let ids = tagIndexer.search(trimmed)
+                await semantic.load(identifiers: ids)
+            }
+            .task { tagIndexer.start() }
             .task(id: SearchKey(query: trimmed, count: index.entries.count)) {
                 let ids = mediaHits.map(\.identifier)
                 await resolved.load(identifiers: ids)
             }
         }
         .fullScreenCover(item: $viewer) { ViewerView(context: $0) }
+        .fullScreenCover(item: $viewerSemantic) { ViewerView(context: $0) }
     }
 
     private struct SearchKey: Hashable { let query: String; let count: Int }
+    private struct SemanticKey: Hashable { let query: String; let revision: Int }
 
     private func resultRow(title: String, subtitle: String, cover: String?, action: @escaping () -> Void) -> some View {
         Button(action: action) {

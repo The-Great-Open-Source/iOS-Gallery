@@ -62,6 +62,7 @@ struct MainTabView: View {
 
     @State private var libraryPath = NavigationPath()
     @EnvironmentObject private var store: CollectionStore
+    @EnvironmentObject private var tagIndexer: PhotoTagIndexer
 
     var body: some View {
         TabView(selection: $tab) {
@@ -79,6 +80,7 @@ struct MainTabView: View {
                 .tag(AppTab.tools)
         }
         .sensoryFeedback(.selection, trigger: tab)
+        .task { tagIndexer.start() }
         #if DEBUG
         .task {
             if DebugHarness.has("-gg-seed") { DebugHarness.seed(store: store) }
