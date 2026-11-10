@@ -1,42 +1,47 @@
 import SwiftUI
+import Photos
 
 struct ToolsView: View {
     var body: some View {
-        ScrollView {
-            VStack(spacing: 14) {
+        List {
+            Section {
                 NavigationLink { VideoCompressorView() } label: {
-                    ToolCard(icon: "arrow.down.right.and.arrow.up.left.video", title: "Video Compressor",
-                             text: "Make large videos smaller.")
+                    ToolRow(icon: "arrow.down.right.and.arrow.up.left", color: .orange,
+                            title: "Video Compressor", subtitle: "Make large videos smaller")
                 }
                 NavigationLink { MediaInspectorView() } label: {
-                    ToolCard(icon: "info.viewfinder", title: "Media Inspector",
-                             text: "Resolution, codec, size and dates.")
+                    ToolRow(icon: "info.circle.fill", color: .blue,
+                            title: "Media Inspector", subtitle: "Resolution, codec, size and dates")
                 }
             }
-            .buttonStyle(PressableStyle())
-            .padding(GG.Spacing.page)
         }
-        .ggScreen()
+        .tint(GG.Palette.accent)
+        .scrollContentBackground(.hidden)
+        .background(GGBackground(grouped: true))
         .navigationTitle("Tools")
     }
 }
 
-struct ToolCard: View {
-    let icon: String, title: String, text: String
+/// Settings-style row: coloured rounded-square icon, title and subtitle.
+struct ToolRow: View {
+    let icon: String
+    let color: Color
+    let title: String
+    let subtitle: String
+
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            Image(systemName: icon).font(.system(size: 24, weight: .regular))
-                .foregroundStyle(GG.Palette.accent).frame(width: 40, height: 40)
-            VStack(alignment: .leading, spacing: 5) {
-                Text(title).font(.headline).foregroundStyle(.primary)
-                Text(text).font(.subheadline).foregroundStyle(GG.Palette.secondaryText)
-                    .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 40, height: 40)
+                .background(color.gradient, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.body)
+                Text(subtitle).font(.footnote).foregroundStyle(.secondary)
             }
-            Spacer(minLength: 0)
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(GG.Palette.surface, in: RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
+        .padding(.vertical, 6)
     }
 }
 
@@ -54,8 +59,8 @@ struct MediaInspectorView: View {
                     MediaInfoLoader(asset: asset)
                     Button("Choose Another") { showPicker = true }.buttonStyle(GGSecondaryButtonStyle())
                 } else {
-                    EmptyStateView(icon: "info.viewfinder", title: "Inspect any media",
-                                   message: "Pick a photo or video to see its technical details.",
+                    EmptyStateView(icon: "info.circle", title: "Media Inspector",
+                                   message: "Choose a photo or video to see its details.",
                                    actionTitle: "Choose Media") { showPicker = true }
                         .padding(.top, 60)
                 }
@@ -72,5 +77,3 @@ struct MediaInspectorView: View {
         }
     }
 }
-
-import Photos
