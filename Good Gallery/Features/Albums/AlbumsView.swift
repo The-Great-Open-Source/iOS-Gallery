@@ -36,7 +36,7 @@ final class AlbumsModel: ObservableObject {
             }
             let smart = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .any, options: nil)
             let user = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
-            return (infos(smart, hideEmpty: true), infos(user, hideEmpty: false))
+            return (infos(smart, hideEmpty: true), infos(user, hideEmpty: true))
         }.value
         smart = result.0
         user = result.1
