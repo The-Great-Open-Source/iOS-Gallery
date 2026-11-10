@@ -19,35 +19,21 @@ struct LibraryView: View {
     @State private var coverTarget: MediaCollection?
     @State private var deleting: MediaCollection?
 
-    private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
+    private let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
 
     private struct RefreshKey: Hashable { let count: Int; let token: Int; let ids: Int }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                Text("A better home for your memories.")
-                    .font(GG.Typography.editorial(16)).italic()
-                    .foregroundStyle(GG.Palette.accent)
-                    .padding(.top, -6)
-
                 LimitedAccessBanner()
 
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack {
-                        SectionHeader(title: "Collections")
-                        Button { showCreate = true } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 15, weight: .semibold))
-                                .frame(width: 34, height: 34)
-                                .ggGlass(Circle(), interactive: true)
-                        }
-                        .accessibilityLabel("New Collection")
-                    }
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionHeader(title: "Collections")
                     if collections.isEmpty {
                         firstRunEmptyState
                     } else {
-                        LazyVGrid(columns: columns, spacing: 14) {
+                        LazyVGrid(columns: columns, spacing: 18) {
                             ForEach(collections) { collection in
                                 NavigationLink(value: collection) {
                                     CollectionCard(collection: collection)
@@ -55,7 +41,6 @@ struct LibraryView: View {
                                 }
                                 .buttonStyle(PressableStyle())
                                 .contextMenu { menu(for: collection) }
-                                .transition(.scale(scale: 0.92).combined(with: .opacity))
                             }
                         }
                         .animation(.snappy(duration: 0.35), value: collections.map(\.id))
@@ -68,11 +53,13 @@ struct LibraryView: View {
             .padding(.bottom, 30)
         }
         .ggScreen()
-        .navigationTitle("Good Gallery")
+        .navigationTitle("Library")
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button { showSearch = true } label: { Image(systemName: "magnifyingglass") }
                     .accessibilityLabel("Search")
+                Button { showCreate = true } label: { Image(systemName: "plus") }
+                    .accessibilityLabel("New Collection")
                 Button { showSettings = true } label: { Image(systemName: "gearshape") }
                     .accessibilityLabel("Settings")
             }
@@ -122,72 +109,54 @@ struct LibraryView: View {
     }
 
     private var firstRunEmptyState: some View {
-        VStack(spacing: 6) {
-            EmptyStateView(
-                icon: "square.stack.3d.up",
-                title: "Create your first collection",
-                message: "Travel, Family, University, Cars — group your photos and videos around what matters to you. Originals never move.",
-                actionTitle: "New Collection") { showCreate = true }
-        }
-        .ggGlass(RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
+        EmptyStateView(
+            icon: "square.stack",
+            title: "No Collections",
+            message: "Group your photos and videos into collections. Originals never move.",
+            actionTitle: "New Collection") { showCreate = true }
     }
 
     private var uncategorizedSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "Uncategorized")
             NavigationLink(value: LibraryRoute.uncategorized) {
                 HStack(spacing: 14) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.ultraThinMaterial)
-                        if let first = uncategorized.assets.first {
-                            CoverImage(identifier: first.localIdentifier, pixels: 200)
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        } else {
-                            Image(systemName: "tray").foregroundStyle(GG.Palette.accent)
-                        }
-                    }
-                    .frame(width: 64, height: 64)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Not yet organised").font(.body.weight(.medium)).foregroundStyle(GG.Palette.text)
+                    CoverImage(identifier: uncategorized.assets.first?.localIdentifier, pixels: 200)
+                        .frame(width: 56, height: 56)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Not Yet Organised").font(.body).foregroundStyle(.primary)
                         Text(uncategorized.hasLoaded ? Format.count(uncategorized.assets.count) : "Counting…")
-                            .font(.subheadline).foregroundStyle(GG.Palette.secondaryText)
+                            .font(.subheadline).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(GG.Palette.secondaryText)
+                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
                 }
-                .padding(12)
-                .ggGlass(RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
+                .padding(10)
+                .background(GG.Palette.surface, in: RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
             }
             .buttonStyle(PressableStyle())
         }
     }
 }
 
+/// Photos-style album tile: square cover, name and count underneath.
 struct CollectionCard: View {
     let collection: MediaCollection
 
     var body: some View {
-        CoverImage(identifier: collection.effectiveCoverIdentifier)
-            .aspectRatio(0.88, contentMode: .fit)
-            .overlay(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(collection.name)
-                        .font(GG.Typography.editorial(20, weight: .medium))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    Text(Format.count(collection.items.count))
-                        .font(.caption).opacity(0.8)
-                }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14).padding(.vertical, 10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .ggGlass(RoundedRectangle(cornerRadius: GG.Radius.card - 6, style: .continuous))
-                .padding(8)
+        VStack(alignment: .leading, spacing: 6) {
+            CoverImage(identifier: collection.effectiveCoverIdentifier)
+                .aspectRatio(1, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            VStack(alignment: .leading, spacing: 0) {
+                Text(collection.name).font(.subheadline.weight(.medium)).foregroundStyle(.primary).lineLimit(1)
+                Text(collection.items.count.formatted()).font(.footnote).foregroundStyle(.secondary)
             }
-            .clipShape(RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(collection.name), \(Format.count(collection.items.count))")
+        }
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(collection.name), \(Format.count(collection.items.count))")
     }
 }
 
@@ -211,10 +180,6 @@ struct UncategorizedView: View {
                                message: "Every photo and video you've shared with Good Gallery belongs to a collection.")
                     .padding(.top, 80)
             } else {
-                Text("Select photos, then add them to a collection. Nothing is moved automatically.")
-                    .font(.footnote).foregroundStyle(GG.Palette.secondaryText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, GG.Spacing.page).padding(.bottom, 8)
                 AssetGrid(assets: model.assets, favorites: Set(favorites.map(\.photoKitLocalIdentifier)),
                           isSelecting: selecting, selection: $selection) { index in
                     viewer = ViewerContext(assets: model.assets, index: index)
