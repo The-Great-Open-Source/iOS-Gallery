@@ -3,6 +3,8 @@ import AVKit
 import Photos
 
 struct VideoCompressorView: View {
+    /// Optionally start with a video already chosen (e.g. from Largest Files).
+    var initialIdentifier: String? = nil
     @EnvironmentObject private var store: CollectionStore
     @StateObject private var model = VideoCompressorViewModel()
     @State private var showPicker = false
@@ -29,6 +31,9 @@ struct VideoCompressorView: View {
         .navigationTitle("Video Compressor")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { model.context = store }
+        .task {
+            if let id = initialIdentifier, case .empty = model.stage { model.select(identifier: id) }
+        }
         .onDisappear { if case .compressing = model.stage {} else { model.sourcePlayer?.pause() } }
         .sheet(isPresented: $showPicker) {
             MediaPickerView(title: "Choose a Video", mode: .single, initialFilter: .videos, allowedFilters: [.videos],
