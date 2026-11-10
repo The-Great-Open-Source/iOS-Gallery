@@ -171,20 +171,22 @@ final class AutoScroller {
     @objc private func tick() {
         guard let scroll = bridge?.scrollView else { return }
         let frame = scroll.convert(scroll.bounds, to: nil)          // window space
-        let zone: CGFloat = 90
-        let top = frame.minY + scroll.adjustedContentInset.top
-        let bottom = frame.maxY - scroll.adjustedContentInset.bottom
+        let inset = scroll.adjustedContentInset
+        let top = frame.minY + inset.top
+        // Floating toolbars sit over the grid, so start the bottom zone well above the screen edge.
+        let bottom = frame.maxY - max(inset.bottom, 90)
+        let zone = max(120, (bottom - top) * 0.22)
         var delta: CGFloat = 0
         if globalPoint.y < top + zone { delta = -speed(top + zone - globalPoint.y, zone) }
         else if globalPoint.y > bottom - zone { delta = speed(globalPoint.y - (bottom - zone), zone) }
         guard delta != 0 else { return }
-        let minY = -scroll.adjustedContentInset.top
-        let maxY = max(minY, scroll.contentSize.height - scroll.bounds.height + scroll.adjustedContentInset.bottom)
+        let minY = -inset.top
+        let maxY = max(minY, scroll.contentSize.height - scroll.bounds.height + inset.bottom)
         let target = min(max(scroll.contentOffset.y + delta, minY), maxY)
-        guard target != scroll.contentOffset.y else { return }
-        scroll.contentOffset.y = target
+        guard abs(target - scroll.contentOffset.y) > 0.01 else { return }
+        scroll.setContentOffset(CGPoint(x: scroll.contentOffset.x, y: target), animated: false)
         onTick?()
     }
 
-    private func speed(_ depth: CGFloat, _ zone: CGFloat) -> CGFloat { 4 + 16 * min(depth / zone, 1.4) }
+    private func speed(_ depth: CGFloat, _ zone: CGFloat) -> CGFloat { 6 + 22 * min(depth / zone, 1.5) }
 }
