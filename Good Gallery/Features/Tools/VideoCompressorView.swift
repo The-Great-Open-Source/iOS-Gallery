@@ -8,7 +8,6 @@ struct VideoCompressorView: View {
     @State private var showPicker = false
     @State private var showExporter = false
     @State private var showPreview = false
-    @State private var confirmDeleteOriginal = false
 
     var body: some View {
         ScrollView {
@@ -43,10 +42,6 @@ struct VideoCompressorView: View {
         .sheet(isPresented: $showPreview) {
             if let url = model.outputURL { OutputPreview(url: url) }
         }
-        .confirmationDialog("Delete the original video?", isPresented: $confirmDeleteOriginal, titleVisibility: .visible) {
-            Button("Delete Original from Photos", role: .destructive) { Task { await model.deleteOriginal() } }
-            Button("Keep Original", role: .cancel) {}
-        } message: { Text("This permanently removes the original video from your photo library (it moves to Recently Deleted). Make sure the compressed copy is saved first.") }
         .alert("Notice", isPresented: Binding(get: { model.statusMessage != nil }, set: { if !$0 { model.statusMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: { Text(model.statusMessage ?? "") }
@@ -196,7 +191,7 @@ struct VideoCompressorView: View {
                 Button("Compress with Different Settings") { model.compressAgain() }
                     .font(.subheadline).foregroundStyle(GG.Palette.secondaryText).padding(.top, 4)
                 if model.savedToPhotos && !model.originalDeleted {
-                    Button("Delete Original…", role: .destructive) { confirmDeleteOriginal = true }
+                    Button("Delete Original", role: .destructive) { Task { await model.deleteOriginal() } }
                         .font(.subheadline).padding(.top, 2)
                 } else if model.originalDeleted {
                     Text("Original moved to Recently Deleted.").font(.footnote).foregroundStyle(GG.Palette.secondaryText)

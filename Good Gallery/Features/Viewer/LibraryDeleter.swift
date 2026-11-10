@@ -6,16 +6,17 @@ import Photos
 @MainActor
 final class LibraryDeleter: ObservableObject {
     @Published var pending: [PHAsset] = []
-    @Published var isConfirming = false
+    @Published private(set) var trigger = UUID()
     @Published var errorMessage: String?
 
+    /// Starts the deletion. iOS itself shows the one and only confirmation ("Delete N Photos?").
     func request(_ assets: [PHAsset]) {
         guard !assets.isEmpty else { return }
         pending = assets
-        isConfirming = true
+        trigger = UUID()
     }
 
-    /// Returns the deleted identifiers (empty if the user cancelled the system prompt).
+    /// Returns the deleted identifiers (empty if the user cancelled iOS's prompt).
     func performDelete() async -> Set<String> {
         let assets = pending
         pending = []
@@ -27,7 +28,6 @@ final class LibraryDeleter: ObservableObject {
             Haptics.success()
             return ids
         } catch {
-            // Cancelling iOS's own confirmation also lands here; only surface real failures.
             let code = (error as NSError).code
             if code != PHPhotosError.userCancelled.rawValue {
                 errorMessage = "The items couldn't be deleted: \(error.localizedDescription)"
@@ -42,25 +42,15 @@ struct DeleteFromLibraryModifier: ViewModifier {
     @EnvironmentObject private var store: CollectionStore
     var onDeleted: (Set<String>) -> Void
 
-    private var title: String {
-        let n = deleter.pending.count
-        return n == 1 ? "Delete this \(deleter.pending.first?.mediaType == .video ? "video" : "photo")?" : "Delete \(n) items?"
-    }
-
     func body(content: Content) -> some View {
         content
-            .confirmationDialog(title, isPresented: $deleter.isConfirming, titleVisibility: .visible) {
-                Button("Delete from Photos Library", role: .destructive) {
-                    Task {
-                        let ids = await deleter.performDelete()
-                        guard !ids.isEmpty else { return }
-                        store.purge(ids)
-                        onDeleted(ids)
-                    }
+            .onChange(of: deleter.trigger) { _, _ in
+                Task {
+                    let ids = await deleter.performDelete()
+                    guard !ids.isEmpty else { return }
+                    store.purge(ids)
+                    onDeleted(ids)
                 }
-                Button("Cancel", role: .cancel) { deleter.pending = [] }
-            } message: {
-                Text("This removes them from your iPhone's Photos library (they stay in Recently Deleted for 30 days) and from every Good Gallery collection. To keep them, use Remove from Collection instead.")
             }
             .alert("Couldn't Delete", isPresented: Binding(get: { deleter.errorMessage != nil },
                                                            set: { if !$0 { deleter.errorMessage = nil } })) {
