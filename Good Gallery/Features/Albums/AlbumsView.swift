@@ -47,14 +47,11 @@ final class AlbumsModel: ObservableObject {
 struct AlbumsView: View {
     @EnvironmentObject private var library: PhotoLibrary
     @StateObject private var model = AlbumsModel()
-    private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
+    private let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 26) {
-                Label("These are your existing Apple Photos albums. They're separate from Good Gallery collections, which you create in Library.",
-                      systemImage: "info.circle")
-                    .font(.footnote).foregroundStyle(GG.Palette.secondaryText)
+            VStack(alignment: .leading, spacing: 24) {
                 LimitedAccessBanner()
                 if !model.hasLoaded {
                     ProgressView().tint(GG.Palette.accent).frame(maxWidth: .infinity).padding(.top, 60)
@@ -78,16 +75,16 @@ struct AlbumsView: View {
     private func section(_ title: String, _ albums: [AlbumInfo]) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             SectionHeader(title: title)
-            LazyVGrid(columns: columns, spacing: 18) {
+            LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(albums) { album in
                     NavigationLink(value: album) {
                         VStack(alignment: .leading, spacing: 8) {
                             CoverImage(identifier: album.coverIdentifier, pixels: 500)
                                 .aspectRatio(1, contentMode: .fit)
-                                .clipShape(RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(album.title).font(.subheadline.weight(.medium)).foregroundStyle(GG.Palette.text).lineLimit(1)
-                                Text(album.count.formatted()).font(.caption).foregroundStyle(GG.Palette.secondaryText)
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text(album.title).font(.subheadline.weight(.medium)).foregroundStyle(.primary).lineLimit(1)
+                                Text(album.count.formatted()).font(.footnote).foregroundStyle(.secondary)
                             }
                         }
                     }
