@@ -231,9 +231,9 @@ private struct VideoPage: View {
     var body: some View {
         ZStack {
             if let player {
-                VideoPlayer(player: player)
-                    .padding(.top, 60)
-                    .padding(.bottom, chromeVisible ? 70 : 0)
+                NativeVideoPlayer(player: player)
+                    .padding(.top, 56)
+                    .padding(.bottom, 84)          // keep clear of our bottom bar
             } else if let poster {
                 Image(uiImage: poster).resizable().scaledToFit().overlay { ProgressView().tint(.white) }
             } else if failed {
@@ -249,6 +249,7 @@ private struct VideoPage: View {
             if isActive {
                 if poster == nil { poster = await ImageLoader.shared.thumbnail(for: asset, pixels: 900) }
                 if player == nil { await loadPlayer() }
+                PlaybackAudio.activate()
                 player?.play()
             } else {
                 player?.pause()
@@ -261,12 +262,16 @@ private struct VideoPage: View {
     private func loadPlayer() async {
         let options = PHVideoRequestOptions()
         options.isNetworkAccessAllowed = true
-        options.deliveryMode = .automatic
+        options.deliveryMode = .highQualityFormat
         let item: AVPlayerItem? = await withCheckedContinuation { continuation in
             PHImageManager.default().requestPlayerItem(forVideo: asset, options: options) { item, _ in
                 continuation.resume(returning: item)
             }
         }
-        if let item { player = AVPlayer(playerItem: item) } else { failed = true }
+        if let item {
+            let newPlayer = AVPlayer(playerItem: item)
+            newPlayer.actionAtItemEnd = .pause
+            player = newPlayer
+        } else { failed = true }
     }
 }

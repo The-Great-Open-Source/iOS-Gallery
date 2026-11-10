@@ -76,7 +76,7 @@ struct VideoCompressorView: View {
     private var readyContent: some View {
         if let info = model.sourceInfo {
             if let player = model.sourcePlayer {
-                VideoPlayer(player: player)
+                NativeVideoPlayer(player: player)
                     .aspectRatio(max(info.displaySize.width, 1) / max(info.displaySize.height, 1), contentMode: .fit)
                     .frame(maxHeight: 320)
                     .clipShape(RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
@@ -254,12 +254,12 @@ private struct OutputPreview: View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
-                if let player { VideoPlayer(player: player) }
+                if let player { NativeVideoPlayer(player: player) }
             }
             .navigationTitle("Compressed Preview")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-            .onAppear { player = AVPlayer(url: url); player?.play() }
+            .onAppear { PlaybackAudio.activate(); player = AVPlayer(url: url); player?.play() }
             .onDisappear { player?.pause() }
         }
         .presentationBackground(.black)
