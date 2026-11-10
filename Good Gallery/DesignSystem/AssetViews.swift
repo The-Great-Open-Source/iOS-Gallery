@@ -13,48 +13,51 @@ struct AssetThumbnail: View {
     @State private var image: UIImage?
 
     var body: some View {
-        Color(GG.Palette.surface)
-            .aspectRatio(1, contentMode: .fit)
-            .overlay {
-                if let image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .transition(.opacity)
+        ZStack {
+            (isSelected ? GG.Palette.accent.opacity(0.45) : GG.Palette.surface)
+            Color.clear
+                .overlay {
+                    if let image {
+                        Image(uiImage: image).resizable().scaledToFill().transition(.opacity)
+                    }
                 }
+                .clipped()
+                // Selected photos shrink into the tile, like Apple Photos.
+                .scaleEffect(isSelected ? 0.84 : 1)
+                .clipShape(RoundedRectangle(cornerRadius: isSelected ? 8 : 0, style: .continuous))
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .clipped()
+        .overlay(alignment: .bottomTrailing) {
+            if asset.mediaType == .video {
+                Pill(text: Format.duration(asset.duration), systemImage: "play.fill").padding(isSelected ? 9 : 4)
             }
-            .clipped()
-            .overlay(alignment: .bottomTrailing) {
-                if asset.mediaType == .video {
-                    Pill(text: Format.duration(asset.duration), systemImage: "play.fill").padding(4)
-                }
+        }
+        .overlay(alignment: .bottomLeading) {
+            if isFavorite && !isSelecting {
+                Image(systemName: "star.fill").font(.system(size: 11)).foregroundStyle(GG.Palette.accent)
+                    .shadow(radius: 2).padding(5)
             }
-            .overlay(alignment: .bottomLeading) {
-                if isFavorite && !isSelecting {
-                    Image(systemName: "star.fill").font(.system(size: 11)).foregroundStyle(GG.Palette.accent)
-                        .shadow(radius: 2).padding(5)
-                }
+        }
+        .overlay {
+            if isDisabled { Color.black.opacity(0.55) }
+        }
+        .overlay(alignment: .topTrailing) {
+            if isDisabled {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(.white.opacity(0.8)).padding(5)
+            } else if isSelecting {
+                SelectionBadge(isSelected: isSelected).padding(isSelected ? 9 : 5)
             }
-            .overlay {
-                if isDisabled { Color.black.opacity(0.55) }
-                if isSelected { Rectangle().strokeBorder(GG.Palette.accent, lineWidth: 3) }
-            }
-            .overlay(alignment: .topTrailing) {
-                if isDisabled {
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.white.opacity(0.8)).padding(5)
-                } else if isSelecting {
-                    SelectionBadge(isSelected: isSelected).padding(5)
-                }
-            }
-            .animation(.snappy(duration: 0.18), value: isSelected)
-            .animation(.easeOut(duration: 0.2), value: image == nil)
-            .task(id: asset.localIdentifier) {
-                image = nil
-                image = await ImageLoader.shared.thumbnail(for: asset, pixels: pixels)
-            }
-            .contentShape(Rectangle())
-            .accessibilityLabel(asset.mediaType == .video ? "Video" : "Photo")
-            .accessibilityAddTraits(isSelected ? .isSelected : [])
+        }
+        .animation(.snappy(duration: 0.18), value: isSelected)
+        .animation(.easeOut(duration: 0.2), value: image == nil)
+        .task(id: asset.localIdentifier) {
+            image = nil
+            image = await ImageLoader.shared.thumbnail(for: asset, pixels: pixels)
+        }
+        .contentShape(Rectangle())
+        .accessibilityLabel(asset.mediaType == .video ? "Video" : "Photo")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
@@ -62,14 +65,14 @@ struct SelectionBadge: View {
     let isSelected: Bool
     var body: some View {
         ZStack {
-            Circle().fill(isSelected ? GG.Palette.accent : Color.black.opacity(0.3))
-            Circle().strokeBorder(.white.opacity(isSelected ? 0 : 0.9), lineWidth: 1.5)
+            Circle().fill(isSelected ? GG.Palette.accent : Color.black.opacity(0.28))
+            Circle().strokeBorder(.white, lineWidth: isSelected ? 2 : 1.5)
             if isSelected {
-                Image(systemName: "checkmark").font(.system(size: 11, weight: .heavy)).foregroundStyle(GG.Palette.onAccent)
+                Image(systemName: "checkmark").font(.system(size: 12, weight: .heavy)).foregroundStyle(GG.Palette.onAccent)
             }
         }
-        .frame(width: 22, height: 22)
-        .scaleEffect(isSelected ? 1 : 0.92)
+        .frame(width: 24, height: 24)
+        .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
     }
 }
 
