@@ -155,18 +155,19 @@ struct CollectionDetailView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button(selecting ? "Done" : "Select") {
+                withAnimation(.snappy) { selecting.toggle(); if !selecting { selection = [] } }
+            }
+            .fontWeight(selecting ? .semibold : .regular)
+            .disabled(resolved.assets.isEmpty)
+        }
         if !selecting {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showPicker = true } label: { Image(systemName: "plus") }.accessibilityLabel("Add Photos")
             }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            if selecting {
-                Button("Done") { withAnimation(.snappy) { selecting = false; selection = [] } }.fontWeight(.semibold)
-            } else {
+            ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button { withAnimation(.snappy) { selecting = true } } label: { Label("Select", systemImage: "checkmark.circle") }
-                        .disabled(resolved.assets.isEmpty)
                     Menu {
                         Picker("Sort", selection: Binding(get: { collection.sortMode }, set: { store.setSort(collection, $0) })) {
                             ForEach(MediaSort.allCases) { Text($0.title).tag($0) }
