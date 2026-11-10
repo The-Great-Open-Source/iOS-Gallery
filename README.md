@@ -31,7 +31,7 @@ Apple Photos is great for viewing, but hard to organise around *your* life. Good
 | **Favorites** | In-app favourites (★), deliberately separate from Apple's ♥︎ |
 | **Albums** | Your existing Apple Photos albums, kept distinct from Good Gallery collections |
 | **Search** | Collections, albums, file names, months/years ("June 2025"), media types — plus **smart search** by content ("sunny days", "beach", "party") using on-device Vision classification |
-| **Backup** | Optional, off by default. Google Drive (manual + automatic) and your own Telegram bot (manual), with a maximum file size |
+| **Backup** | Optional, off by default. Google Drive (manual + automatic), your own Telegram bot and private YouTube uploads (manual), with a maximum file size |
 | **Video Compressor** | Three quality presets, 1080p/720p/480p, honest size estimate, progress, cancel, preview, save to Photos or Files |
 | **Media Inspector** | Resolution, format, size, dates, codec, frame rate, location coordinates |
 | **Settings** | Appearance (Dark / Light / System), permission status, cache & storage, privacy policy, About, feedback |
@@ -102,7 +102,8 @@ Backup is opt-in (Settings → Backup) and sends files straight from the phone t
 - **Limits:** a maximum file size (10 MB – 2 GB), include photos and/or videos, Wi-Fi-only option. Oversized files are skipped and reported. Items already sent are remembered (`BackupRecord`) and never re-sent.
 - **Telegram (manual):** each user creates their own bot with @BotFather, pastes the token (stored in the Keychain) and taps *Detect Chat*. Files go via `sendDocument`; the Bot API caps uploads at **50 MB**, so the lower of the two limits applies.
 - **Google Drive (manual + automatic):** OAuth 2.0 + PKCE through `ASWebAuthenticationSession` (no SDK), scope `drive.file`, resumable uploads streamed from disk into *Good Gallery Backup / <collection>*. Automatic mode backs up new items of the collections the user selects, when the app becomes active and via a `BGProcessingTask` (iOS decides when it runs).
-- **One-time setup for Drive:** create an OAuth **iOS** client ID in Google Cloud Console (Drive API enabled, bundle ID `com.harshanacz.Good-Gallery`) and paste it into `GoogleDriveConfig.clientID` (`Media/Backup/GoogleDriveService.swift`). Until then the Drive controls stay hidden.
+- **One-time setup for Drive:** create an OAuth **iOS** client ID in Google Cloud Console (Drive API enabled, bundle ID `com.harshanacz.Good-Gallery`) and paste it into `GoogleConfig.clientID` (`Media/Backup/GoogleAuth.swift`). Until then the Drive and YouTube controls stay hidden. For YouTube, also enable the **YouTube Data API v3** in the same project.
+- **YouTube (manual, videos only):** uploads to the user's own channel as **Private** via the resumable upload API (scope `youtube.upload`, same Google client ID). Photos are skipped. Google limits uploads per day per project, and unverified projects can only upload private videos. While the OAuth consent screen is in *Testing*, sign-ins expire after 7 days.
 
 ## Smart search
 
