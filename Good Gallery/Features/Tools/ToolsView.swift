@@ -6,14 +6,12 @@ struct ToolsView: View {
             VStack(spacing: 14) {
                 NavigationLink { VideoCompressorView() } label: {
                     ToolCard(icon: "arrow.down.right.and.arrow.up.left.video", title: "Video Compressor",
-                             text: "Shrink large videos right on your device. Choose a quality and resolution; your original is never touched.")
+                             text: "Make large videos smaller.")
                 }
                 NavigationLink { MediaInspectorView() } label: {
                     ToolCard(icon: "info.viewfinder", title: "Media Inspector",
-                             text: "See resolution, codec, frame rate, file size, dates and more for any photo or video.")
+                             text: "Resolution, codec, size and dates.")
                 }
-                Label("Everything runs locally. Nothing is uploaded.", systemImage: "lock")
-                    .font(.footnote).foregroundStyle(GG.Palette.secondaryText).padding(.top, 10)
             }
             .buttonStyle(PressableStyle())
             .padding(GG.Spacing.page)
@@ -26,11 +24,11 @@ struct ToolsView: View {
 struct ToolCard: View {
     let icon: String, title: String, text: String
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
-            Image(systemName: icon).font(.system(size: 24, weight: .light))
+        HStack(alignment: .center, spacing: 16) {
+            Image(systemName: icon).font(.system(size: 24, weight: .regular))
                 .foregroundStyle(GG.Palette.accent).frame(width: 40, height: 40)
             VStack(alignment: .leading, spacing: 5) {
-                Text(title).font(GG.Typography.editorial(21)).foregroundStyle(GG.Palette.text)
+                Text(title).font(.headline).foregroundStyle(.primary)
                 Text(text).font(.subheadline).foregroundStyle(GG.Palette.secondaryText)
                     .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
             }
@@ -38,7 +36,7 @@ struct ToolCard: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .ggGlass(RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
+        .background(GG.Palette.surface, in: RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
     }
 }
 

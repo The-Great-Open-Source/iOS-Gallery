@@ -84,7 +84,7 @@ struct VideoCompressorView: View {
 
             GGCard {
                 VStack(spacing: 6) {
-                    Text("ORIGINAL").font(GG.Typography.eyebrow).foregroundStyle(GG.Palette.accent)
+                    Text("Original").font(GG.Typography.eyebrow).foregroundStyle(GG.Palette.accent)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     InfoRow(label: "Size", value: info.fileSize > 0 ? Format.bytes(info.fileSize) : "Unknown")
                     InfoRow(label: "Resolution", value: "\(Int(info.displaySize.width)) × \(Int(info.displaySize.height))")
@@ -95,7 +95,7 @@ struct VideoCompressorView: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("QUALITY").font(GG.Typography.eyebrow).foregroundStyle(GG.Palette.secondaryText)
+                Text("Quality").font(GG.Typography.eyebrow).foregroundStyle(GG.Palette.secondaryText)
                 ForEach(CompressionPreset.allCases) { preset in
                     PresetRow(preset: preset, selected: model.preset == preset) {
                         Haptics.selection(); model.preset = preset
@@ -104,19 +104,17 @@ struct VideoCompressorView: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("RESOLUTION").font(GG.Typography.eyebrow).foregroundStyle(GG.Palette.secondaryText)
+                Text("Resolution").font(GG.Typography.eyebrow).foregroundStyle(GG.Palette.secondaryText)
                 Picker("Resolution", selection: $model.resolution) {
                     ForEach(OutputResolution.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                Text("Never upscales: a lower-resolution source stays as it is.")
-                    .font(.caption).foregroundStyle(GG.Palette.secondaryText)
             }
 
             if let plan = model.plan {
                 GGCard {
                     VStack(spacing: 6) {
-                        Text("ESTIMATE").font(GG.Typography.eyebrow).foregroundStyle(GG.Palette.accent)
+                        Text("Estimate").font(GG.Typography.eyebrow).foregroundStyle(GG.Palette.accent)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         InfoRow(label: "Output size", value: "≈ " + Format.bytes(plan.estimatedBytes))
                         InfoRow(label: "Output resolution", value: "\(Int(plan.displaySize.width)) × \(Int(plan.displaySize.height))")
@@ -126,9 +124,6 @@ struct VideoCompressorView: View {
                         } else if model.estimatedSavings != nil {
                             InfoRow(label: "Estimated saving", value: "Little — already well compressed")
                         }
-                        Text("Estimates vary with content. The real size is shown when finished.")
-                            .font(.caption).foregroundStyle(GG.Palette.secondaryText)
-                            .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 4)
                     }
                 }
             }
@@ -149,13 +144,11 @@ struct VideoCompressorView: View {
                     .rotationEffect(.degrees(-90))
                     .animation(.linear(duration: 0.25), value: progress)
                 Text("\(Int(progress * 100))%")
-                    .font(GG.Typography.editorial(40)).monospacedDigit().foregroundStyle(GG.Palette.text)
+                    .font(GG.Typography.heading(40)).monospacedDigit().foregroundStyle(GG.Palette.text)
             }
             .frame(width: 170, height: 170)
             VStack(spacing: 4) {
-                Text("Compressing…").font(.headline).foregroundStyle(GG.Palette.text)
-                Text("Keep Good Gallery open. This happens entirely on your device.")
-                    .font(.footnote).foregroundStyle(GG.Palette.secondaryText).multilineTextAlignment(.center)
+                Text("Compressing…").font(.headline)
             }
             Button("Cancel") { model.cancel() }.buttonStyle(GGSecondaryButtonStyle(fullWidth: false))
         }
@@ -169,7 +162,7 @@ struct VideoCompressorView: View {
             let saved = info.fileSize > 0 ? 1 - Double(model.outputSize) / Double(info.fileSize) : nil
             VStack(spacing: 6) {
                 Image(systemName: "checkmark.circle").font(.system(size: 38, weight: .light)).foregroundStyle(GG.Palette.accent)
-                Text("Done").font(GG.Typography.editorial(30)).foregroundStyle(GG.Palette.text)
+                Text("Done").font(GG.Typography.heading(30)).foregroundStyle(GG.Palette.text)
                 if let saved, saved > 0 {
                     Text("\(Int((saved * 100).rounded()))% smaller").font(.subheadline).foregroundStyle(GG.Palette.accent)
                 } else if saved != nil {
@@ -234,7 +227,7 @@ private struct PresetRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 8) {
                         Text(preset.title).font(.body.weight(.medium)).foregroundStyle(GG.Palette.text)
-                        if preset == .balanced { Text("RECOMMENDED").font(.system(size: 9, weight: .bold)).foregroundStyle(GG.Palette.accent) }
+                        if preset == .balanced { Text("Recommended").font(.caption2.weight(.semibold)).foregroundStyle(GG.Palette.accent) }
                     }
                     Text(preset.subtitle).font(.footnote).foregroundStyle(GG.Palette.secondaryText)
                         .multilineTextAlignment(.leading)
@@ -242,8 +235,7 @@ private struct PresetRow: View {
                 Spacer(minLength: 0)
             }
             .padding(14)
-            .ggGlass(RoundedRectangle(cornerRadius: GG.Radius.control, style: .continuous),
-                     tint: selected ? GG.Palette.accent.opacity(0.28) : nil, interactive: true)
+            .background(selected ? GG.Palette.accent.opacity(0.18) : GG.Palette.surface, in: RoundedRectangle(cornerRadius: GG.Radius.control, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: GG.Radius.control, style: .continuous)
                     .strokeBorder(selected ? GG.Palette.accent.opacity(0.8) : .clear, lineWidth: 1)
