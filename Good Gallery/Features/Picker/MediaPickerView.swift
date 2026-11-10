@@ -50,6 +50,9 @@ struct MediaPickerView: View {
                                 cell(fetch.object(at: index))
                             }
                         }
+                        .dragToSelect(isEnabled: mode == .multiple,
+                                      isSelected: { selected.contains($0) },
+                                      apply: { id, on in setSelected(id, on) })
                     }
                 } else {
                     LoadingGrid()
@@ -88,11 +91,19 @@ struct MediaPickerView: View {
         let id = asset.localIdentifier
         let disabled = disabledIdentifiers.contains(id)
         return AssetThumbnail(asset: asset, isSelecting: true, isSelected: selected.contains(id), isDisabled: disabled)
+            .trackFrame(id: id)
             .onTapGesture {
                 guard !disabled else { return }
                 Haptics.selection()
                 toggle(id)
             }
+    }
+
+    /// Used by drag-to-select; skips items that are already in the collection.
+    private func setSelected(_ id: String, _ on: Bool) {
+        guard !disabledIdentifiers.contains(id) else { return }
+        if on, !selected.contains(id) { selected.insert(id); order.append(id) }
+        if !on, selected.contains(id) { selected.remove(id); order.removeAll { $0 == id } }
     }
 
     private func toggle(_ id: String) {

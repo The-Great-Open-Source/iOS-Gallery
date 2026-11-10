@@ -89,6 +89,7 @@ struct AssetGrid: View {
                 let id = asset.localIdentifier
                 AssetThumbnail(asset: asset, isSelecting: isSelecting, isSelected: selection.contains(id),
                                isFavorite: favorites.contains(id))
+                    .trackFrame(id: id)
                     .onTapGesture {
                         if isSelecting {
                             Haptics.selection()
@@ -99,6 +100,9 @@ struct AssetGrid: View {
                     }
             }
         }
+        .dragToSelect(isEnabled: isSelecting,
+                      isSelected: { selection.contains($0) },
+                      apply: { id, on in if on { selection.insert(id) } else { selection.remove(id) } })
     }
 }
 
