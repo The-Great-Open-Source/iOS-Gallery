@@ -30,7 +30,8 @@ Apple Photos is great for viewing, but hard to organise around *your* life. Good
 | **Viewer** | Immersive full-screen paging, pinch & double-tap zoom, video playback, favourite / share / add / remove / delete / info |
 | **Favorites** | In-app favourites (★), deliberately separate from Apple's ♥︎ |
 | **Albums** | Your existing Apple Photos albums, kept distinct from Good Gallery collections |
-| **Search** | Collections, albums, file names, months/years ("June 2025"), media types ("video", "screenshot") — on-device index |
+| **Search** | Collections, albums, file names, months/years ("June 2025"), media types — plus **smart search** by content ("sunny days", "beach", "party") using on-device Vision classification |
+| **Backup** | Optional, off by default. Google Drive (manual + automatic) and your own Telegram bot (manual), with a maximum file size |
 | **Video Compressor** | Three quality presets, 1080p/720p/480p, honest size estimate, progress, cancel, preview, save to Photos or Files |
 | **Media Inspector** | Resolution, format, size, dates, codec, frame rate, location coordinates |
 | **Settings** | Appearance (Dark / Light / System), permission status, cache & storage, privacy policy, About, feedback |
@@ -94,9 +95,22 @@ Deleting a `MediaCollection` cascades only to its join rows.
 
 Photos access is requested after an explanatory welcome screen. Under **Limited Access**, assets outside the shared selection can look "missing", so Good Gallery **never auto-prunes** them; clean-up is offered only with full access. A banner offers *Select More Photos* and a shortcut to Settings.
 
+## Backup
+
+Backup is opt-in (Settings → Backup) and sends files straight from the phone to the user's *own* accounts — nothing passes through any server of ours.
+
+- **Limits:** a maximum file size (10 MB – 2 GB), include photos and/or videos, Wi-Fi-only option. Oversized files are skipped and reported. Items already sent are remembered (`BackupRecord`) and never re-sent.
+- **Telegram (manual):** each user creates their own bot with @BotFather, pastes the token (stored in the Keychain) and taps *Detect Chat*. Files go via `sendDocument`; the Bot API caps uploads at **50 MB**, so the lower of the two limits applies.
+- **Google Drive (manual + automatic):** OAuth 2.0 + PKCE through `ASWebAuthenticationSession` (no SDK), scope `drive.file`, resumable uploads streamed from disk into *Good Gallery Backup / <collection>*. Automatic mode backs up new items of the collections the user selects, when the app becomes active and via a `BGProcessingTask` (iOS decides when it runs).
+- **One-time setup for Drive:** create an OAuth **iOS** client ID in Google Cloud Console (Drive API enabled, bundle ID `com.harshanacz.Good-Gallery`) and paste it into `GoogleDriveConfig.clientID` (`Media/Backup/GoogleDriveService.swift`). Until then the Drive controls stay hidden.
+
+## Smart search
+
+`PhotoTagIndexer` classifies each photo once with Apple's `VNClassifyImageRequest` (≈1,300 labels), stores the top labels locally (`PhotoTags`) and resumes where it left off. Queries are mapped to labels through a curated concept map (`SearchConcepts`, e.g. *sunny* → `sun`, `blue_sky`, `sky`) plus exact label words, then photos are ranked by label confidence. Everything runs on-device; iCloud-only photos are skipped until they're local. A CLIP-style model could replace the concept map later for fully free-text search.
+
 ## Privacy
 
-Good Gallery stores only lightweight metadata locally (collection names, which assets belong to which collection, favourites, compression history). It never uploads media, has no accounts and collects no personal data. See the in-app *Privacy Policy*.
+Good Gallery stores only lightweight metadata locally (collection names, which assets belong to which collection, favourites, compression history, backup history, on-device image labels). It never uploads media on its own — the only exception is the opt-in Backup feature, which sends files directly to the user's own Drive/Telegram. No accounts, no analytics, no third-party SDKs. See the in-app *Privacy Policy*.
 
 ## Debug harness
 
@@ -115,6 +129,8 @@ DEBUG builds accept launch arguments for verifying flows without UI scripting:
 - `localIdentifier`s can change after a restore/migration. Planned: also store `PHCloudIdentifier` and remap on launch.
 - Collections are reordered via a sheet, not by dragging in the grid; multi-select of collections isn't implemented yet.
 - Slo-mo / composition videos aren't supported by the compressor; HDR sources are re-encoded as 8-bit SDR.
+- Slo-mo-like cases aside, Telegram backup is limited to 50 MB per file by Telegram; automatic backup depends on iOS background scheduling.
+- Smart search understands a curated vocabulary (sky, beach, food, people, cars, pets, …), not arbitrary sentences.
 - The feedback address (`AppInfo.feedbackEmail`) is a placeholder.
 
 ## Roadmap
