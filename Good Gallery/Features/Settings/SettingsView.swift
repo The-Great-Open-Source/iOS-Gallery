@@ -18,6 +18,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @AppStorage("appearance") private var appearanceRaw = AppearancePreference.system.rawValue
+    @EnvironmentObject private var tagIndexer: PhotoTagIndexer
+    @AppStorage("smartSearch.enabled") private var smartSearch = true
     @State private var scratchBytes: Int64 = 0
     @State private var databaseBytes: Int64 = 0
     @State private var cacheCleared = false
@@ -52,6 +54,15 @@ struct SettingsView: View {
                 } header: { Text("Photo Library") } footer: {
                     Text("Good Gallery reads your photos to show and organise them. It never copies, uploads, or modifies your originals.")
                 }
+
+                Section {
+                    Toggle("Search by What's in Photos", isOn: $smartSearch)
+                        .onChange(of: smartSearch) { _, on in if on { tagIndexer.start() } else { tagIndexer.stop() } }
+                    if smartSearch {
+                        LabeledContent("Analysed", value: tagIndexer.total > 0 ? "\(tagIndexer.indexed.formatted()) of \(tagIndexer.total.formatted())" : tagIndexer.indexed.formatted())
+                        Button("Rebuild") { tagIndexer.rebuild() }.disabled(tagIndexer.isIndexing)
+                    }
+                } header: { Text("Smart Search") } footer: { Text("Photos are analysed on this device to find things like “sunny days” or “beach”. Nothing is uploaded.") }
 
                 Section("Storage & Cache") {
                     LabeledContent("Collections database", value: Format.bytes(databaseBytes))
