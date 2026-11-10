@@ -1,7 +1,8 @@
 import SwiftUI
 import SwiftData
+import Photos
 
-enum LibraryRoute: Hashable { case uncategorized }
+enum LibraryRoute: Hashable { case allPhotos, uncategorized }
 
 struct LibraryView: View {
     @EnvironmentObject private var library: PhotoLibrary
@@ -9,6 +10,7 @@ struct LibraryView: View {
     @Query(sort: \MediaCollection.sortOrder) private var collections: [MediaCollection]
     @Query private var allItems: [CollectionMedia]
     @StateObject private var uncategorized = UncategorizedModel()
+    @StateObject private var allPhotos = AllPhotosModel()
     @Namespace private var zoom
 
     @State private var showCreate = false
@@ -27,6 +29,9 @@ struct LibraryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 LimitedAccessBanner()
+
+                libraryRow(title: "All Photos", route: .allPhotos, cover: allPhotos.assets.first?.localIdentifier,
+                           count: allPhotos.hasLoaded ? Format.count(allPhotos.assets.count) : "Counting…")
 
                 VStack(alignment: .leading, spacing: 12) {
                     SectionHeader(title: "Collections")
@@ -54,6 +59,7 @@ struct LibraryView: View {
         }
         .ggScreen()
         .navigationTitle("Library")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button { showSearch = true } label: { Image(systemName: "magnifyingglass") }
@@ -68,12 +74,20 @@ struct LibraryView: View {
             CollectionDetailView(collection: collection)
                 .zoomDestination(id: collection.id, in: zoom)
         }
-        .navigationDestination(for: LibraryRoute.self) { _ in
-            UncategorizedView(model: uncategorized)
+        .navigationDestination(for: LibraryRoute.self) { route in
+            switch route {
+            case .allPhotos:
+                AssetBrowserView(title: "All Photos", assets: allPhotos.assets, hasLoaded: allPhotos.hasLoaded,
+                                 emptyTitle: "No Photos", emptyMessage: "No photos or videos are available to Good Gallery.")
+            case .uncategorized:
+                AssetBrowserView(title: "Uncategorized", assets: uncategorized.assets, hasLoaded: uncategorized.hasLoaded,
+                                 emptyTitle: "All Organised", emptyMessage: "Every photo and video belongs to a collection.")
+            }
         }
         .task(id: RefreshKey(count: allItems.count, token: library.changeToken, ids: allItems.first?.photoKitLocalIdentifier.hashValue ?? 0)) {
             await uncategorized.refresh(organized: Set(allItems.map(\.photoKitLocalIdentifier)))
         }
+        .task(id: library.changeToken) { await allPhotos.refresh() }
         .sheet(isPresented: $showCreate) { CollectionEditorSheet(mode: .create) }
         .sheet(isPresented: $showSearch) { SearchView() }
         .sheet(isPresented: $showSettings) { SettingsView() }
@@ -119,24 +133,28 @@ struct LibraryView: View {
     private var uncategorizedSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "Uncategorized")
-            NavigationLink(value: LibraryRoute.uncategorized) {
-                HStack(spacing: 14) {
-                    CoverImage(identifier: uncategorized.assets.first?.localIdentifier, pixels: 200)
-                        .frame(width: 56, height: 56)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Not Yet Organised").font(.body).foregroundStyle(.primary)
-                        Text(uncategorized.hasLoaded ? Format.count(uncategorized.assets.count) : "Counting…")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-                }
-                .padding(10)
-                .background(GG.Palette.surface, in: RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
-            }
-            .buttonStyle(PressableStyle())
+            libraryRow(title: "Not Yet Organised", route: .uncategorized, cover: uncategorized.assets.first?.localIdentifier,
+                       count: uncategorized.hasLoaded ? Format.count(uncategorized.assets.count) : "Counting…")
         }
+    }
+
+    private func libraryRow(title: String, route: LibraryRoute, cover: String?, count: String) -> some View {
+        NavigationLink(value: route) {
+            HStack(spacing: 14) {
+                CoverImage(identifier: cover, pixels: 200)
+                    .frame(width: 56, height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.body).foregroundStyle(.primary)
+                    Text(count).font(.subheadline).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+            }
+            .padding(10)
+            .background(GG.Palette.surface, in: RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
+        }
+        .buttonStyle(PressableStyle())
     }
 }
 
@@ -160,8 +178,13 @@ struct CollectionCard: View {
     }
 }
 
-struct UncategorizedView: View {
-    @ObservedObject var model: UncategorizedModel
+struct AssetBrowserView: View {
+    let title: String
+    let allAssets: [PHAsset]
+    let hasLoaded: Bool
+    let emptyTitle: String
+    let emptyMessage: String
+    @State private var filter: MediaFilter = .all
     @EnvironmentObject private var store: CollectionStore
     @Query private var favorites: [FavoriteMedia]
     @StateObject private var share = SharePreparer()
@@ -171,34 +194,51 @@ struct UncategorizedView: View {
     @State private var viewer: ViewerContext?
     @State private var showAddTo = false
 
+    init(title: String, assets: [PHAsset], hasLoaded: Bool, emptyTitle: String, emptyMessage: String) {
+        self.title = title; self.allAssets = assets; self.hasLoaded = hasLoaded
+        self.emptyTitle = emptyTitle; self.emptyMessage = emptyMessage
+    }
+
+    private var assets: [PHAsset] {
+        switch filter {
+        case .all: allAssets
+        case .photos: allAssets.filter { $0.mediaType == .image }
+        case .videos: allAssets.filter { $0.mediaType == .video }
+        }
+    }
+
     var body: some View {
         ScrollView {
-            if !model.hasLoaded {
+            if !hasLoaded {
                 LoadingGrid()
-            } else if model.assets.isEmpty {
-                EmptyStateView(icon: "checkmark.circle", title: "All Organised",
-                               message: "Every photo and video you've shared with Good Gallery belongs to a collection.")
+            } else if assets.isEmpty {
+                EmptyStateView(icon: "photo.on.rectangle", title: emptyTitle, message: emptyMessage)
                     .padding(.top, 80)
             } else {
-                AssetGrid(assets: model.assets, favorites: Set(favorites.map(\.photoKitLocalIdentifier)),
+                AssetGrid(assets: assets, favorites: Set(favorites.map(\.photoKitLocalIdentifier)),
                           isSelecting: selecting, selection: $selection) { index in
-                    viewer = ViewerContext(assets: model.assets, index: index)
+                    viewer = ViewerContext(assets: assets, index: index)
                 }
             }
         }
         .ggScreen()
-        .navigationTitle("Uncategorized")
+        .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Picker("Show", selection: $filter) { ForEach(MediaFilter.allCases) { Text($0.rawValue).tag($0) } }
+                } label: { Image(systemName: filter == .all ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill") }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button(selecting ? "Done" : "Select") {
                     withAnimation(.snappy) { selecting.toggle(); if !selecting { selection = [] } }
                 }
-                .disabled(model.assets.isEmpty)
+                .disabled(assets.isEmpty)
             }
             ToolbarItemGroup(placement: .bottomBar) {
                 if selecting {
-                    Button { share.share(model.assets.filter { selection.contains($0.localIdentifier) }) } label: {
+                    Button { share.share(assets.filter { selection.contains($0.localIdentifier) }) } label: {
                         Image(systemName: "square.and.arrow.up")
                     }.disabled(selection.isEmpty)
                     Spacer()
@@ -206,7 +246,7 @@ struct UncategorizedView: View {
                     Spacer()
                     Button("Add to Collection") { showAddTo = true }.disabled(selection.isEmpty).fontWeight(.semibold)
                     Button(role: .destructive) {
-                        deleter.request(model.assets.filter { selection.contains($0.localIdentifier) })
+                        deleter.request(assets.filter { selection.contains($0.localIdentifier) })
                     } label: { Image(systemName: "trash") }.disabled(selection.isEmpty)
                 }
             }

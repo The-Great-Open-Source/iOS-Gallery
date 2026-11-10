@@ -21,3 +21,21 @@ final class UncategorizedModel: ObservableObject {
         hasLoaded = true
     }
 }
+
+/// Every photo and video in the library (newest first), loaded in the background.
+@MainActor
+final class AllPhotosModel: ObservableObject {
+    @Published private(set) var assets: [PHAsset] = []
+    @Published private(set) var hasLoaded = false
+
+    func refresh() async {
+        let result = await Task.detached(priority: .userInitiated) { () -> [PHAsset] in
+            var out: [PHAsset] = []
+            Assets.allAssetsFetch().enumerateObjects { asset, _, _ in out.append(asset) }
+            return out
+        }.value
+        guard !Task.isCancelled else { return }
+        assets = result
+        hasLoaded = true
+    }
+}
