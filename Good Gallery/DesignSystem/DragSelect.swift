@@ -45,6 +45,9 @@ struct DragSelectModifier: ViewModifier {
     @State private var mode: Bool?
     @State private var touched: Set<String> = []
     @State private var lastGlobal: CGPoint = .zero
+    // GestureState resets automatically when a gesture ends *or is cancelled*, so the scroll lock can never get stuck.
+    @GestureState private var swipeActive = false
+    @GestureState private var holdActive = false
 
     func body(content: Content) -> some View {
         content
@@ -54,6 +57,8 @@ struct DragSelectModifier: ViewModifier {
             .simultaneousGesture(swipeGesture, including: isEnabled ? .all : .none)
             .simultaneousGesture(holdGesture, including: isEnabled ? .all : .none)
             .onChange(of: isEnabled) { _, enabled in if !enabled { finish() } }
+            .onChange(of: swipeActive) { _, active in if !active { finish() } }
+            .onChange(of: holdActive) { _, active in if !active { finish() } }
             .onDisappear { finish() }
     }
 
@@ -62,9 +67,11 @@ struct DragSelectModifier: ViewModifier {
     /// Quick swipe: decides on the first movement whether it's a selection (horizontal) or a scroll (vertical).
     private var swipeGesture: some Gesture {
         DragGesture(minimumDistance: 8, coordinateSpace: .global)
+            .updating($swipeActive) { _, state, _ in state = true }
             .onChanged { value in
                 if source == .hold || rejectedSwipe { return }
                 if source == nil {
+                    bridge.setScrollEnabled(true)          // safety: a new touch always starts unlocked
                     let dx = abs(value.translation.width), dy = abs(value.translation.height)
                     guard dx > dy * 0.9 else { rejectedSwipe = true; return }   // vertical: let the page scroll
                     begin(.swipe)
@@ -79,6 +86,7 @@ struct DragSelectModifier: ViewModifier {
     private var holdGesture: some Gesture {
         LongPressGesture(minimumDuration: 0.22)
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .global))
+            .updating($holdActive) { value, state, _ in if case .second(true, _) = value { state = true } }
             .onChanged { value in
                 guard case .second(true, let drag) = value, source != .swipe else { return }
                 if source == nil { begin(.hold); Haptics.impact(.light) }
