@@ -246,9 +246,10 @@
 				DEVELOPMENT_TEAM = C37NWJLS6S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Good Gallery";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Good Gallery saves compressed videos to your photo library when you ask it to.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Good Gallery reads your existing photos and videos so you can organise them into collections. Nothing is copied or uploaded.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Good Gallery reads your existing photos and videos so you can organise them into collections. Photos are never uploaded unless you choose to back them up.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -279,9 +280,10 @@
 				DEVELOPMENT_TEAM = C37NWJLS6S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Good Gallery";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Good Gallery saves compressed videos to your photo library when you ask it to.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Good Gallery reads your existing photos and videos so you can organise them into collections. Nothing is copied or uploaded.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Good Gallery reads your existing photos and videos so you can organise them into collections. Photos are never uploaded unless you choose to back them up.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
