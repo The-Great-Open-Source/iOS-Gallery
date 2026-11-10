@@ -87,7 +87,6 @@ struct SearchView: View {
                 await resolved.load(identifiers: ids)
             }
         }
-        .presentationBackground { GGBackground() }
         .fullScreenCover(item: $viewer) { ViewerView(context: $0) }
     }
 
