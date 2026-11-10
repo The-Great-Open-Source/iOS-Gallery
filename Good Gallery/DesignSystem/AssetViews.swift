@@ -102,32 +102,29 @@ struct AssetGrid: View {
     }
 }
 
-/// Cover image for a collection/album card, loaded by identifier, with an elegant placeholder.
+/// Cover image for a collection/album card, loaded by identifier. It fills whatever frame the caller gives it
+/// and never influences layout itself.
 struct CoverImage: View {
     let identifier: String?
     var pixels: CGFloat = 600
     @State private var image: UIImage?
-    @State private var didFail = false
 
     var body: some View {
-        ZStack {
-            LinearGradient(colors: [GG.Palette.elevated, GG.Palette.surface], startPoint: .topLeading, endPoint: .bottomTrailing)
-            if let image {
-                Image(uiImage: image).resizable().scaledToFill().transition(.opacity)
-            } else {
-                Image(systemName: didFail || identifier == nil ? "photo" : "photo")
-                    .font(.system(size: 26, weight: .ultraLight))
-                    .foregroundStyle(GG.Palette.secondaryText.opacity(0.5))
+        GG.Palette.surface
+            .overlay {
+                if let image {
+                    Image(uiImage: image).resizable().scaledToFill().transition(.opacity)
+                } else {
+                    Image(systemName: "photo").font(.title2).foregroundStyle(.tertiary)
+                }
             }
-        }
-        .clipped()
-        .animation(.easeOut(duration: 0.25), value: image == nil)
-        .task(id: identifier) {
-            image = nil
-            guard let identifier else { return }
-            image = await ImageLoader.shared.thumbnail(forIdentifier: identifier, pixels: pixels)
-            didFail = image == nil
-        }
+            .clipped()
+            .animation(.easeOut(duration: 0.25), value: image == nil)
+            .task(id: identifier) {
+                image = nil
+                guard let identifier else { return }
+                image = await ImageLoader.shared.thumbnail(forIdentifier: identifier, pixels: pixels)
+            }
     }
 }
 
