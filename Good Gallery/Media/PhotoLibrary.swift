@@ -99,6 +99,11 @@ final class ResolvedAssets: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var hasLoaded = false
 
+    /// Drops assets immediately (e.g. right after they were deleted) without waiting for a reload.
+    func remove(_ identifiers: Set<String>) {
+        assets.removeAll { identifiers.contains($0.localIdentifier) }
+    }
+
     /// - Parameter identifiers: already ordered by "added" order, newest first.
     func load(identifiers: [String], sort: MediaSort = .addedNewest) async {
         isLoading = true

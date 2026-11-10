@@ -72,6 +72,8 @@ struct FavoritesView: View {
         }
         .fullScreenCover(item: $viewer) { ViewerView(context: $0) }
         .shareSheet(share)
-        .deleteFromLibrary(deleter) { _ in selection = []; selecting = false }
+        .deleteFromLibrary(deleter) { ids in
+            withAnimation(.snappy) { resolved.remove(ids); selection = []; selecting = false }
+        }
     }
 }

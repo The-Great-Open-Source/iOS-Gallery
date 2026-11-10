@@ -119,7 +119,9 @@ struct CollectionDetailView: View {
             }
         } message: { Text("These photos were deleted from your library. This only updates the collection.") }
         .shareSheet(share)
-        .deleteFromLibrary(deleter) { _ in selection = []; selecting = false }
+        .deleteFromLibrary(deleter) { ids in
+            withAnimation(.snappy) { resolved.remove(ids); selection = []; selecting = false }
+        }
     }
 
     // MARK: Pieces

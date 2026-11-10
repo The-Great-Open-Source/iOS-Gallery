@@ -162,6 +162,8 @@ struct AlbumDetailView: View {
         }
         .fullScreenCover(item: $viewer) { ViewerView(context: $0) }
         .shareSheet(share)
-        .deleteFromLibrary(deleter) { _ in selection = []; selecting = false }
+        .deleteFromLibrary(deleter) { ids in
+            withAnimation(.snappy) { assets.removeAll { ids.contains($0.localIdentifier) }; selection = []; selecting = false }
+        }
     }
 }

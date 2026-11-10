@@ -82,11 +82,9 @@ struct LibraryView: View {
         .navigationDestination(for: LibraryRoute.self) { route in
             switch route {
             case .allPhotos:
-                AssetBrowserView(title: "All Photos", assets: allPhotos.assets, hasLoaded: allPhotos.hasLoaded,
-                                 emptyTitle: "No Photos", emptyMessage: "No photos or videos are available to Good Gallery.")
+                AllPhotosScreen(model: allPhotos)
             case .uncategorized:
-                AssetBrowserView(title: "Uncategorized", assets: uncategorized.assets, hasLoaded: uncategorized.hasLoaded,
-                                 emptyTitle: "All Organised", emptyMessage: "Every photo and video belongs to a collection.")
+                UncategorizedScreen(model: uncategorized)
             }
         }
         .task(id: RefreshKey(count: allItems.count, token: library.changeToken, ids: allItems.first?.photoKitLocalIdentifier.hashValue ?? 0)) {
@@ -171,6 +169,23 @@ struct CollectionCard: View {
     }
 }
 
+/// Observes the model directly so the grid updates live (a navigation destination closure alone captures a stale copy).
+struct AllPhotosScreen: View {
+    @ObservedObject var model: AllPhotosModel
+    var body: some View {
+        AssetBrowserView(title: "All Photos", assets: model.assets, hasLoaded: model.hasLoaded,
+                         emptyTitle: "No Photos", emptyMessage: "No photos or videos are available to Good Gallery.")
+    }
+}
+
+struct UncategorizedScreen: View {
+    @ObservedObject var model: UncategorizedModel
+    var body: some View {
+        AssetBrowserView(title: "Uncategorized", assets: model.assets, hasLoaded: model.hasLoaded,
+                         emptyTitle: "All Organised", emptyMessage: "Every photo and video belongs to a collection.")
+    }
+}
+
 struct AssetBrowserView: View {
     let title: String
     let allAssets: [PHAsset]
@@ -178,6 +193,7 @@ struct AssetBrowserView: View {
     let emptyTitle: String
     let emptyMessage: String
     @State private var filter: MediaFilter = .all
+    @State private var removedIDs: Set<String> = []
     @EnvironmentObject private var store: CollectionStore
     @Query private var favorites: [FavoriteMedia]
     @StateObject private var share = SharePreparer()
@@ -193,10 +209,11 @@ struct AssetBrowserView: View {
     }
 
     private var assets: [PHAsset] {
+        let base = removedIDs.isEmpty ? allAssets : allAssets.filter { !removedIDs.contains($0.localIdentifier) }
         switch filter {
-        case .all: allAssets
-        case .photos: allAssets.filter { $0.mediaType == .image }
-        case .videos: allAssets.filter { $0.mediaType == .video }
+        case .all: return base
+        case .photos: return base.filter { $0.mediaType == .image }
+        case .videos: return base.filter { $0.mediaType == .video }
         }
     }
 
@@ -252,6 +269,8 @@ struct AssetBrowserView: View {
         }
         .fullScreenCover(item: $viewer) { ViewerView(context: $0) }
         .shareSheet(share)
-        .deleteFromLibrary(deleter) { _ in selection = []; selecting = false }
+        .deleteFromLibrary(deleter) { ids in
+            withAnimation(.snappy) { removedIDs.formUnion(ids); selection = []; selecting = false }
+        }
     }
 }
