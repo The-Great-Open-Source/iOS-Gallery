@@ -35,20 +35,14 @@ struct CollectionDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                hero
-                    .padding(.horizontal, GG.Spacing.page)
-
-                if !collection.details.isEmpty {
-                    Text(collection.details)
-                        .font(.subheadline).foregroundStyle(GG.Palette.secondaryText)
-                        .padding(.horizontal, GG.Spacing.page)
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(subtitle).font(.subheadline).foregroundStyle(.secondary)
+                    if !collection.details.isEmpty {
+                        Text(collection.details).font(.subheadline).foregroundStyle(.primary)
+                    }
                 }
-
-                HStack(spacing: 10) {
-                    Button { showPicker = true } label: { Label("Add Photos", systemImage: "plus") }
-                        .buttonStyle(GGPrimaryButtonStyle())
-                }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, GG.Spacing.page)
 
                 if !resolved.missingIdentifiers.isEmpty { unavailableBanner.padding(.horizontal, GG.Spacing.page) }
@@ -56,8 +50,8 @@ struct CollectionDetailView: View {
                 if !resolved.hasLoaded && !collection.items.isEmpty {
                     LoadingGrid()
                 } else if resolved.assets.isEmpty {
-                    EmptyStateView(icon: "photo.on.rectangle.angled", title: "Nothing here yet",
-                                   message: "Add photos and videos from your library. They stay where they are — this collection just points to them.",
+                    EmptyStateView(icon: "photo.on.rectangle.angled", title: "No Photos",
+                                   message: "Add photos and videos from your library.",
                                    actionTitle: "Add Photos") { showPicker = true }
                 } else {
                     AssetGrid(assets: resolved.assets, favorites: Set(favorites.map(\.photoKitLocalIdentifier)),
@@ -70,7 +64,7 @@ struct CollectionDetailView: View {
         }
         .ggScreen()
         .navigationTitle(collection.name)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .toolbar { toolbar }
         .toolbar(selecting ? .hidden : .visible, for: .tabBar)
         .task(id: LoadKey(count: collection.items.count, updated: collection.updatedAt,
@@ -128,21 +122,6 @@ struct CollectionDetailView: View {
 
     // MARK: Pieces
 
-    private var hero: some View {
-        CoverImage(identifier: collection.effectiveCoverIdentifier, pixels: 1000)
-            .frame(height: 230)
-            .overlay { LinearGradient(colors: [.clear, .black.opacity(0.65)], startPoint: .center, endPoint: .bottom) }
-            .overlay(alignment: .bottomLeading) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(collection.name)
-                        .font(GG.Typography.editorial(32, weight: .medium)).lineLimit(2)
-                    Text(subtitle).font(.footnote).opacity(0.85)
-                }
-                .foregroundStyle(.white).padding(18)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
-    }
-
     private var subtitle: String {
         var parts = [Format.count(collection.items.count)]
         if resolved.hasLoaded, photoCount > 0, videoCount > 0 {
@@ -174,6 +153,11 @@ struct CollectionDetailView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
+        if !selecting {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showPicker = true } label: { Image(systemName: "plus") }.accessibilityLabel("Add Photos")
+            }
+        }
         ToolbarItem(placement: .topBarTrailing) {
             if selecting {
                 Button("Done") { withAnimation(.snappy) { selecting = false; selection = [] } }.fontWeight(.semibold)
@@ -255,6 +239,5 @@ struct CollectionStatsSheet: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
         .presentationDetents([.medium])
-        .presentationBackground { GGBackground() }
     }
 }

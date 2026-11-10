@@ -23,43 +23,30 @@ struct CollectionEditorSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 22) {
-                    if isCreate {
+            Form {
+                if isCreate {
+                    Section {
                         Button { showPicker = true } label: {
-                            CoverImage(identifier: coverID)
-                                .frame(height: 190)
-                                .clipShape(RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
-                                .overlay(alignment: .bottom) {
-                                    Label(coverID == nil ? "Choose Cover (Optional)" : "Change Cover", systemImage: "photo.badge.plus")
-                                        .font(.footnote.weight(.semibold))
-                                        .padding(.horizontal, 12).padding(.vertical, 8)
-                                        .ggGlass(Capsule())
-                                        .padding(12)
-                                }
+                            HStack(spacing: 14) {
+                                CoverImage(identifier: coverID, pixels: 200)
+                                    .frame(width: 56, height: 56)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                Text(coverID == nil ? "Choose Cover" : "Change Cover")
+                                Spacer()
+                            }
                         }
-                        .buttonStyle(PressableStyle())
-                    }
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("NAME").font(GG.Typography.eyebrow).foregroundStyle(GG.Palette.secondaryText)
-                        TextField("Travel, Family, Projects…", text: $name)
-                            .font(GG.Typography.editorial(26))
-                            .focused($nameFocused)
-                            .submitLabel(.done)
-                            .padding(.bottom, 8)
-                            .overlay(alignment: .bottom) { Rectangle().fill(GG.Palette.separator).frame(height: 1) }
-                    }
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("DESCRIPTION").font(GG.Typography.eyebrow).foregroundStyle(GG.Palette.secondaryText)
-                        TextField("Optional", text: $details, axis: .vertical)
-                            .lineLimit(1...4)
-                            .padding(.bottom, 8)
-                            .overlay(alignment: .bottom) { Rectangle().fill(GG.Palette.separator).frame(height: 1) }
                     }
                 }
-                .padding(GG.Spacing.page)
+                Section("Name") {
+                    TextField("Collection name", text: $name)
+                        .focused($nameFocused)
+                        .submitLabel(.done)
+                }
+                Section("Description") {
+                    TextField("Optional", text: $details, axis: .vertical).lineLimit(1...4)
+                }
             }
-            .ggScreen()
+            .tint(GG.Palette.accent)
             .navigationTitle(isCreate ? "New Collection" : "Edit Collection")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -78,7 +65,6 @@ struct CollectionEditorSheet: View {
             }
         }
         .presentationDetents([.large])
-        .presentationBackground { GGBackground() }
     }
 
     private func save() {
@@ -116,12 +102,11 @@ struct ReorderCollectionsSheet: View {
                             Text(Format.count(collection.items.count)).font(.caption).foregroundStyle(GG.Palette.secondaryText)
                         }
                     }
-                    .listRowBackground(GlassRowBackground())
                 }
                 .onMove { working.move(fromOffsets: $0, toOffset: $1) }
             }
             .environment(\.editMode, .constant(.active))
-            .ggScreen()
+            .ggScreen(grouped: true)
             .navigationTitle("Reorder")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -132,7 +117,6 @@ struct ReorderCollectionsSheet: View {
             }
             .onAppear { working = collections }
         }
-        .presentationBackground { GGBackground() }
     }
 }
 
@@ -152,7 +136,6 @@ struct AddToCollectionSheet: View {
                 Button { showCreate = true } label: {
                     Label("New Collection", systemImage: "plus").foregroundStyle(GG.Palette.accent)
                 }
-                .listRowBackground(GlassRowBackground())
                 ForEach(collections) { collection in
                     Button { add(to: collection) } label: {
                         HStack(spacing: 14) {
@@ -166,10 +149,9 @@ struct AddToCollectionSheet: View {
                             Spacer()
                         }
                     }
-                    .listRowBackground(GlassRowBackground())
                 }
             }
-            .ggScreen()
+            .ggScreen(grouped: true)
             .navigationTitle("Add \(Format.count(identifiers.count)) to…")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
@@ -178,7 +160,6 @@ struct AddToCollectionSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
-        .presentationBackground { GGBackground() }
     }
 
     private func add(to collection: MediaCollection) {
