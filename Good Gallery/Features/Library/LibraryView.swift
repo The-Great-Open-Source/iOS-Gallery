@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 import Photos
 
-enum LibraryRoute: Hashable { case allPhotos, uncategorized }
+enum LibraryRoute: Hashable { case allPhotos, uncategorized, largeFiles }
 
 struct LibraryView: View {
     @EnvironmentObject private var library: PhotoLibrary
@@ -29,6 +29,8 @@ struct LibraryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 LimitedAccessBanner()
+
+                StorageCard()
 
                 VStack(spacing: 0) {
                     libraryRow(icon: "photo.on.rectangle", title: "All Photos", route: .allPhotos,
@@ -85,6 +87,8 @@ struct LibraryView: View {
                 AllPhotosScreen(model: allPhotos)
             case .uncategorized:
                 UncategorizedScreen(model: uncategorized)
+            case .largeFiles:
+                LargeFilesView()
             }
         }
         .task(id: RefreshKey(count: allItems.count, token: library.changeToken, ids: allItems.first?.photoKitLocalIdentifier.hashValue ?? 0)) {
