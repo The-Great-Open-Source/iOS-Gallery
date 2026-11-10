@@ -17,12 +17,8 @@ extension View {
         })
     }
 
-    /// Swipe across cells to select (or deselect) them all in one motion, like Photos.
-    ///
-    /// - A mostly **horizontal** swipe starts selecting; a vertical swipe still scrolls normally.
-    /// - Or press and hold a cell, then drag in any direction.
-    /// - The first cell touched decides the mode: unselected → select, selected → deselect.
-    /// - Near the top/bottom edge the page auto-scrolls so you can keep going.
+    /// Swipe sideways across cells to select (or deselect) them, like Photos. Vertical swipes scroll as normal.
+    /// Press and hold, then drag, also works in any direction. Near the top/bottom the page auto-scrolls.
     func dragToSelect(isEnabled: Bool, isSelected: @escaping (String) -> Bool, apply: @escaping (String, Bool) -> Void) -> some View {
         modifier(DragSelectModifier(isEnabled: isEnabled, isSelected: isSelected, apply: apply))
     }
@@ -35,165 +31,187 @@ struct DragSelectModifier: ViewModifier {
     let isSelected: (String) -> Bool
     let apply: (String, Bool) -> Void
 
-    private enum Source { case swipe, hold }
-
     @State private var frames: [String: CGRect] = [:]
-    @State private var bridge = ScrollBridge()
-    @State private var scroller = AutoScroller()
-    @State private var source: Source?
-    @State private var rejectedSwipe = false
+    @State private var controller = DragSelectController()
     @State private var mode: Bool?
     @State private var touched: Set<String> = []
-    @State private var lastGlobal: CGPoint = .zero
-    // GestureState resets automatically when a gesture ends *or is cancelled*, so the scroll lock can never get stuck.
-    @GestureState private var swipeActive = false
-    @GestureState private var holdActive = false
 
     func body(content: Content) -> some View {
         content
             .coordinateSpace(name: Self.space)
             .onPreferenceChange(CellFramesKey.self) { frames = $0 }
-            .background(ScrollBridgeView(bridge: bridge))
-            .simultaneousGesture(swipeGesture, including: isEnabled ? .all : .none)
-            .simultaneousGesture(holdGesture, including: isEnabled ? .all : .none)
-            .onChange(of: isEnabled) { _, enabled in if !enabled { finish() } }
-            .onChange(of: swipeActive) { _, active in if !active { finish() } }
-            .onChange(of: holdActive) { _, active in if !active { finish() } }
-            .onDisappear { finish() }
+            .background(DragSelectBridge(controller: controller, isEnabled: isEnabled, configure: configure))
     }
 
-    // MARK: Gestures
-
-    /// Quick swipe: decides on the first movement whether it's a selection (horizontal) or a scroll (vertical).
-    private var swipeGesture: some Gesture {
-        DragGesture(minimumDistance: 8, coordinateSpace: .global)
-            .updating($swipeActive) { _, state, _ in state = true }
-            .onChanged { value in
-                if source == .hold || rejectedSwipe { return }
-                if source == nil {
-                    bridge.setScrollEnabled(true)          // safety: a new touch always starts unlocked
-                    let dx = abs(value.translation.width), dy = abs(value.translation.height)
-                    guard dx > dy * 0.9 else { rejectedSwipe = true; return }   // vertical: let the page scroll
-                    begin(.swipe)
-                    handle(globalPoint: value.startLocation)
-                }
-                move(to: value.location)
-            }
-            .onEnded { _ in finish() }
+    private func configure(_ controller: DragSelectController) {
+        controller.onBegin = { local in
+            mode = nil; touched = []
+            hit(local)
+        }
+        controller.onMove = { local in hit(local) }
+        controller.onEnd = { mode = nil; touched = [] }
     }
 
-    /// Press and hold, then drag in any direction.
-    private var holdGesture: some Gesture {
-        LongPressGesture(minimumDuration: 0.22)
-            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .global))
-            .updating($holdActive) { value, state, _ in if case .second(true, _) = value { state = true } }
-            .onChanged { value in
-                guard case .second(true, let drag) = value, source != .swipe else { return }
-                if source == nil { begin(.hold); Haptics.impact(.light) }
-                if let point = drag?.location { move(to: point) }
-            }
-            .onEnded { _ in finish() }
-    }
-
-    // MARK: Selection
-
-    private func begin(_ new: Source) {
-        source = new
-        bridge.setScrollEnabled(false)
-        scroller.start(bridge: bridge) { handle(globalPoint: lastGlobal) }
-    }
-
-    private func move(to globalPoint: CGPoint) {
-        lastGlobal = globalPoint
-        scroller.update(globalPoint: globalPoint)
-        handle(globalPoint: globalPoint)
-    }
-
-    private func handle(globalPoint: CGPoint) {
-        guard let local = bridge.localPoint(fromGlobal: globalPoint),
-              let id = frames.first(where: { $0.value.contains(local) })?.key, !touched.contains(id) else { return }
+    private func hit(_ local: CGPoint) {
+        guard let id = frames.first(where: { $0.value.contains(local) })?.key, !touched.contains(id) else { return }
         if mode == nil { mode = !isSelected(id) }
         touched.insert(id)
         apply(id, mode ?? true)
         Haptics.selection()
     }
-
-    private func finish() {
-        scroller.stop()
-        bridge.setScrollEnabled(true)
-        source = nil
-        rejectedSwipe = false
-        mode = nil
-        touched = []
-    }
 }
 
-// MARK: - UIKit bridge
+// MARK: - UIKit
 
-/// Finds the enclosing UIScrollView so selection can freeze it and auto-scroll it.
-final class ScrollBridge {
-    weak var view: UIView?
+private struct DragSelectBridge: UIViewRepresentable {
+    let controller: DragSelectController
+    let isEnabled: Bool
+    let configure: (DragSelectController) -> Void
+
+    func makeUIView(context: Context) -> UIView {
+        let v = UIView(); v.isUserInteractionEnabled = false
+        controller.gridView = v
+        return v
+    }
+
+    func updateUIView(_ view: UIView, context: Context) {
+        controller.gridView = view
+        controller.isEnabled = isEnabled
+        configure(controller)
+        // The scroll view only exists once we're in the window hierarchy.
+        DispatchQueue.main.async { controller.attachIfNeeded() }
+    }
+
+    static func dismantleUIView(_ view: UIView, coordinator: ()) {}
+}
+
+/// Owns two recognizers attached to the enclosing UIScrollView:
+/// - a pan that **only begins for horizontal motion** (so vertical scrolling is never touched), and
+/// - a long-press-then-drag for any direction.
+/// UIKit always reports ended/cancelled, so scrolling can never stay locked.
+final class DragSelectController: NSObject, UIGestureRecognizerDelegate {
+    weak var gridView: UIView?
+    var isEnabled = false { didSet { if !isEnabled { unlock() } } }
+    var onBegin: ((CGPoint) -> Void)?
+    var onMove: ((CGPoint) -> Void)?
+    var onEnd: (() -> Void)?
+
+    private let pan = UIPanGestureRecognizer()
+    private let hold = UILongPressGestureRecognizer()
+    private weak var attached: UIScrollView?
+    private var autoScroll: CADisplayLink?
+    private var globalPoint: CGPoint = .zero
+    private var active = false
+
+    override init() {
+        super.init()
+        pan.addTarget(self, action: #selector(handle(_:)))
+        hold.addTarget(self, action: #selector(handle(_:)))
+        hold.minimumPressDuration = 0.25
+        hold.allowableMovement = 12
+        for g in [pan, hold] as [UIGestureRecognizer] {
+            g.delegate = self
+            g.cancelsTouchesInView = false
+            g.delaysTouchesBegan = false
+        }
+    }
+
     var scrollView: UIScrollView? {
-        var current = view?.superview
+        var current = gridView?.superview
         while let candidate = current {
             if let scroll = candidate as? UIScrollView { return scroll }
             current = candidate.superview
         }
         return nil
     }
-    func setScrollEnabled(_ enabled: Bool) { scrollView?.isScrollEnabled = enabled }
-    /// Converts a window-space point into the grid's coordinate space (accounts for current scroll offset).
-    func localPoint(fromGlobal point: CGPoint) -> CGPoint? { view?.convert(point, from: nil) }
-}
 
-private struct ScrollBridgeView: UIViewRepresentable {
-    let bridge: ScrollBridge
-    func makeUIView(context: Context) -> UIView {
-        let v = UIView(); v.isUserInteractionEnabled = false
-        bridge.view = v
-        return v
+    func attachIfNeeded() {
+        guard let scroll = scrollView, attached !== scroll else { return }
+        detach()
+        scroll.addGestureRecognizer(pan)
+        scroll.addGestureRecognizer(hold)
+        attached = scroll
     }
-    func updateUIView(_ view: UIView, context: Context) { bridge.view = view }
-}
 
-/// Scrolls the page while a drag-selection is held near the top or bottom edge.
-final class AutoScroller {
-    private var link: CADisplayLink?
-    private weak var bridge: ScrollBridge?
-    private var onTick: (() -> Void)?
-    private var globalPoint: CGPoint = .zero
+    func detach() {
+        attached?.removeGestureRecognizer(pan)
+        attached?.removeGestureRecognizer(hold)
+        attached = nil
+    }
 
-    func start(bridge: ScrollBridge, onTick: @escaping () -> Void) {
-        stop()
-        self.bridge = bridge
-        self.onTick = onTick
+    deinit { detach(); autoScroll?.invalidate() }
+
+    // MARK: Delegate
+
+    func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+        guard isEnabled, let grid = gridView, grid.window != nil else { return false }
+        guard grid.bounds.contains(recognizer.location(in: grid)) else { return false }
+        if recognizer === pan {
+            let v = pan.velocity(in: attached)
+            return abs(v.x) > abs(v.y) * 1.1          // sideways only; vertical belongs to the scroll view
+        }
+        return true
+    }
+
+    func gestureRecognizer(_ a: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith b: UIGestureRecognizer) -> Bool { true }
+
+    // MARK: Handling
+
+    @objc private func handle(_ recognizer: UIGestureRecognizer) {
+        guard let grid = gridView else { return }
+        let local = recognizer.location(in: grid)
+        globalPoint = recognizer.location(in: nil)
+        switch recognizer.state {
+        case .began:
+            if recognizer === hold { Haptics.impact(.light) }
+            active = true
+            attached?.isScrollEnabled = false
+            startAutoScroll()
+            onBegin?(local)
+        case .changed:
+            if active { onMove?(local) }
+        case .ended, .cancelled, .failed:
+            unlock()
+        default: break
+        }
+    }
+
+    private func unlock() {
+        let wasActive = active
+        active = false
+        autoScroll?.invalidate(); autoScroll = nil
+        attached?.isScrollEnabled = true
+        if wasActive { onEnd?() }
+    }
+
+    // MARK: Auto-scroll near the edges
+
+    private func startAutoScroll() {
+        autoScroll?.invalidate()
         let link = CADisplayLink(target: self, selector: #selector(tick))
         link.add(to: .main, forMode: .common)
-        self.link = link
+        autoScroll = link
     }
 
-    func update(globalPoint: CGPoint) { self.globalPoint = globalPoint }
-
-    func stop() { link?.invalidate(); link = nil; onTick = nil }
-
     @objc private func tick() {
-        guard let scroll = bridge?.scrollView else { return }
-        let frame = scroll.convert(scroll.bounds, to: nil)          // window space
+        guard active, let scroll = attached, let grid = gridView else { return }
+        let frame = scroll.convert(scroll.bounds, to: nil)
         let inset = scroll.adjustedContentInset
         let top = frame.minY + inset.top
-        // Floating toolbars sit over the grid, so start the bottom zone well above the screen edge.
-        let bottom = frame.maxY - max(inset.bottom, 90)
+        let bottom = frame.maxY - max(inset.bottom, 90)       // floating toolbars sit over the grid
         let zone = max(120, (bottom - top) * 0.22)
+        let y = globalPoint.y
         var delta: CGFloat = 0
-        if globalPoint.y < top + zone { delta = -speed(top + zone - globalPoint.y, zone) }
-        else if globalPoint.y > bottom - zone { delta = speed(globalPoint.y - (bottom - zone), zone) }
+        if y < top + zone { delta = -speed(top + zone - y, zone) }
+        else if y > bottom - zone { delta = speed(y - (bottom - zone), zone) }
         guard delta != 0 else { return }
         let minY = -inset.top
         let maxY = max(minY, scroll.contentSize.height - scroll.bounds.height + inset.bottom)
         let target = min(max(scroll.contentOffset.y + delta, minY), maxY)
         guard abs(target - scroll.contentOffset.y) > 0.01 else { return }
         scroll.setContentOffset(CGPoint(x: scroll.contentOffset.x, y: target), animated: false)
-        onTick?()
+        // The finger hasn't moved but the content has, so re-test what's under it.
+        onMove?(grid.convert(globalPoint, from: nil))
     }
 
     private func speed(_ depth: CGFloat, _ zone: CGFloat) -> CGFloat { 6 + 22 * min(depth / zone, 1.5) }
