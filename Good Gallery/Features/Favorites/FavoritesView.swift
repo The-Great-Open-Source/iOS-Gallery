@@ -19,11 +19,6 @@ struct FavoritesView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Label("Good Gallery favorites are separate from the ♥︎ in Apple Photos. Favoriting here never changes your Photos library.",
-                      systemImage: "star")
-                    .font(.footnote).foregroundStyle(GG.Palette.secondaryText)
-                    .padding(.horizontal, GG.Spacing.page)
-
                 if favorites.isEmpty {
                     EmptyStateView(icon: "star", title: "No favorites yet",
                                    message: "Open any photo or video and tap the star to keep it here.")
