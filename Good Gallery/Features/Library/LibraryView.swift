@@ -27,11 +27,17 @@ struct LibraryView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 24) {
                 LimitedAccessBanner()
 
-                libraryRow(title: "All Photos", route: .allPhotos, cover: allPhotos.assets.first?.localIdentifier,
-                           count: allPhotos.hasLoaded ? Format.count(allPhotos.assets.count) : "Counting…")
+                VStack(spacing: 0) {
+                    libraryRow(icon: "photo.on.rectangle", title: "All Photos", route: .allPhotos,
+                               count: allPhotos.hasLoaded ? allPhotos.assets.count.formatted() : "")
+                    Divider().padding(.leading, 52)
+                    libraryRow(icon: "tray", title: "Uncategorized", route: .uncategorized,
+                               count: uncategorized.hasLoaded ? uncategorized.assets.count.formatted() : "")
+                }
+                .background(GG.Palette.surface, in: RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 12) {
                     SectionHeader(title: "Collections")
@@ -52,7 +58,6 @@ struct LibraryView: View {
                     }
                 }
 
-                uncategorizedSection
             }
             .padding(.horizontal, GG.Spacing.page)
             .padding(.bottom, 30)
@@ -130,31 +135,19 @@ struct LibraryView: View {
             actionTitle: "New Collection") { showCreate = true }
     }
 
-    private var uncategorizedSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Uncategorized")
-            libraryRow(title: "Not Yet Organised", route: .uncategorized, cover: uncategorized.assets.first?.localIdentifier,
-                       count: uncategorized.hasLoaded ? Format.count(uncategorized.assets.count) : "Counting…")
-        }
-    }
-
-    private func libraryRow(title: String, route: LibraryRoute, cover: String?, count: String) -> some View {
+    private func libraryRow(icon: String, title: String, route: LibraryRoute, count: String) -> some View {
         NavigationLink(value: route) {
-            HStack(spacing: 14) {
-                CoverImage(identifier: cover, pixels: 200)
-                    .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.body).foregroundStyle(.primary)
-                    Text(count).font(.subheadline).foregroundStyle(.secondary)
-                }
+            HStack(spacing: 12) {
+                Image(systemName: icon).font(.title3).foregroundStyle(GG.Palette.accent).frame(width: 28)
+                Text(title).foregroundStyle(.primary)
                 Spacer()
+                Text(count).foregroundStyle(.secondary)
                 Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
             }
-            .padding(10)
-            .background(GG.Palette.surface, in: RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
+            .padding(.horizontal, 14).padding(.vertical, 13)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(PressableStyle())
+        .buttonStyle(.plain)
     }
 }
 
