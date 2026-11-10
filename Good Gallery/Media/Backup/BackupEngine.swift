@@ -3,10 +3,15 @@ import SwiftData
 import SwiftUI
 
 enum BackupDestination: String, CaseIterable, Identifiable {
-    case drive, telegram
+    case drive, telegram, youtube
     var id: String { rawValue }
-    var title: String { self == .drive ? "Google Drive" : "Telegram" }
-    var icon: String { self == .drive ? "externaldrive.badge.icloud" : "paperplane" }
+    var title: String {
+        switch self { case .drive: "Google Drive"; case .telegram: "Telegram"; case .youtube: "YouTube" }
+    }
+    var icon: String {
+        switch self { case .drive: "externaldrive.badge.icloud"; case .telegram: "paperplane"; case .youtube: "play.rectangle" }
+    }
+    var videosOnly: Bool { self == .youtube }
 
     /// Largest file this destination accepts, honouring the user's own limit.
     var effectiveLimit: Int64 {
@@ -76,7 +81,7 @@ final class BackupEngine: ObservableObject {
             let id = asset.localIdentifier
             if done.contains(id) { result.alreadyDone += 1; continue }
             let isVideo = asset.mediaType == .video
-            if (isVideo && !BackupSettings.includeVideos) || (!isVideo && !BackupSettings.includePhotos) {
+            if (destination.videosOnly && !isVideo) || (isVideo && !BackupSettings.includeVideos) || (!isVideo && !BackupSettings.includePhotos) {
                 result.filteredByType += 1; continue
             }
             if let known = Self.originalSize(of: asset), known > limit { result.tooLarge += 1; continue }
@@ -90,6 +95,10 @@ final class BackupEngine: ObservableObject {
                 switch destination {
                 case .drive: try await GoogleDriveService.shared.upload(fileURL: url, folderID: driveFolder!)
                 case .telegram: try await TelegramService.sendDocument(fileURL: url, caption: folderName)
+                case .youtube:
+                    let stem = url.deletingPathExtension().lastPathComponent
+                    let title = [folderName, stem].compactMap { $0 }.joined(separator: " – ")
+                    try await YouTubeService.shared.uploadPrivate(fileURL: url, title: title, description: "Uploaded from Good Gallery")
                 }
                 store.context.insert(BackupRecord(destination: destination.rawValue, identifier: id))
                 result.sent += 1

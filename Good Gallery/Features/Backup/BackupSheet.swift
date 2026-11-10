@@ -8,12 +8,14 @@ struct BackupSheet: View {
 
     @EnvironmentObject private var engine: BackupEngine
     @ObservedObject private var drive = GoogleDriveService.shared
+    @ObservedObject private var youtube = YouTubeService.shared
     @Environment(\.dismiss) private var dismiss
     @State private var destination: BackupDestination = .telegram
 
     private var available: [BackupDestination] {
         var list: [BackupDestination] = []
-        if GoogleDriveConfig.isConfigured && drive.isSignedIn { list.append(.drive) }
+        if GoogleConfig.isConfigured && drive.isSignedIn { list.append(.drive) }
+        if GoogleConfig.isConfigured && youtube.isSignedIn { list.append(.youtube) }
         if TelegramService.isConfigured { list.append(.telegram) }
         return list
     }
@@ -44,7 +46,7 @@ struct BackupSheet: View {
             Section {
                 if available.count > 1 {
                     Picker("Send to", selection: $destination) { ForEach(available) { Text($0.title).tag($0) } }
-                        .pickerStyle(.segmented)
+                        .pickerStyle(.menu)
                 } else if let only = available.first {
                     Label(only.title, systemImage: only.icon)
                 }
@@ -52,7 +54,9 @@ struct BackupSheet: View {
                 LabeledContent("Maximum file size", value: sizeText(destination.effectiveLimit))
                 if let folderName { LabeledContent(destination == .drive ? "Drive folder" : "Caption", value: folderName) }
             } footer: {
-                Text("Originals are sent as files. Items over the size limit are skipped, and items already sent are not sent again.")
+                Text(destination == .youtube
+                     ? "Videos only, uploaded as Private to your channel. Photos are skipped. YouTube limits uploads per day."
+                     : "Originals are sent as files. Items over the size limit are skipped, and items already sent are not sent again.")
             }
             Section {
                 Button("Start Backup") { engine.start(assets: assets, to: destination, folderName: folderName) }

@@ -4,6 +4,7 @@ import SwiftData
 struct BackupSettingsView: View {
     @EnvironmentObject private var engine: BackupEngine
     @ObservedObject private var drive = GoogleDriveService.shared
+    @ObservedObject private var youtube = YouTubeService.shared
     @AppStorage(BackupSettings.Key.maxFileSizeMB) private var maxMB = BackupSettings.defaultMaxFileSizeMB
     @AppStorage(BackupSettings.Key.includePhotos) private var includePhotos = true
     @AppStorage(BackupSettings.Key.includeVideos) private var includeVideos = true
@@ -30,8 +31,8 @@ struct BackupSettingsView: View {
             }
 
             Section {
-                if !GoogleDriveConfig.isConfigured {
-                    Text("Google Drive isn't set up in this build. Add your OAuth client ID in GoogleDriveConfig.swift.")
+                if !GoogleConfig.isConfigured {
+                    Text("Google Drive isn't set up in this build. Add your OAuth client ID in GoogleConfig.swift.")
                         .font(.footnote).foregroundStyle(.secondary)
                 } else if drive.isSignedIn {
                     Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
@@ -59,6 +60,21 @@ struct BackupSettingsView: View {
             }
             .listRowSeparator(.visible)
 
+            if GoogleConfig.isConfigured {
+                Section {
+                    if youtube.isSignedIn {
+                        Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                        Button("Sign Out", role: .destructive) { youtube.signOut() }
+                    } else {
+                        Button { signInYouTube() } label: {
+                            HStack { Text("Sign In with Google"); if signingIn { Spacer(); ProgressView() } }
+                        }.disabled(signingIn)
+                    }
+                } header: { Text("YouTube") } footer: {
+                    Text("Videos only. Uploaded as Private to your own channel. Google limits uploads per day. Manual only.")
+                }
+            }
+
             Section {
                 NavigationLink {
                     TelegramSetupView { telegramConnected = TelegramService.isConfigured }
@@ -82,12 +98,22 @@ struct BackupSettingsView: View {
         .onAppear { telegramConnected = TelegramService.isConfigured }
     }
 
+    private func signInYouTube() {
+        signingIn = true
+        Task {
+            defer { signingIn = false }
+            do { try await youtube.signIn() }
+            catch GoogleAuthError.cancelled {}
+            catch { errorMessage = error.localizedDescription }
+        }
+    }
+
     private func signIn() {
         signingIn = true
         Task {
             defer { signingIn = false }
             do { try await drive.signIn() }
-            catch DriveError.cancelled {}
+            catch GoogleAuthError.cancelled {}
             catch { errorMessage = error.localizedDescription }
         }
     }
