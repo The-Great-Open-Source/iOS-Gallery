@@ -4,19 +4,20 @@ import UIKit
 /// Design tokens for Good Gallery: "Dark Editorial Luxury + Native Apple Minimalism".
 enum GG {
     enum Palette {
-        static let background    = Color(light: 0xF6F2EA, dark: 0x101010)
-        static let surface       = Color(light: 0xEDE7DC, dark: 0x191919)
-        static let elevated      = Color(light: 0xFFFFFF, dark: 0x22211F)
+        static let background    = Color(uiColor: .systemBackground)
+        static let surface       = Color(uiColor: .secondarySystemBackground)
+        static let elevated      = Color(uiColor: .tertiarySystemBackground)
+        static let grouped       = Color(uiColor: .systemGroupedBackground)
         static let accent        = Color(light: 0x9A7547, dark: 0xD6B48D)
-        static let text          = Color(light: 0x1B1A18, dark: 0xF5F0E8)
-        static let secondaryText = Color(light: 0x6B655E, dark: 0xA7A19A)
-        static let separator     = Color(light: 0xD9D2C6, dark: 0x33312E)
+        static let text          = Color.primary
+        static let secondaryText = Color.secondary
+        static let separator     = Color(uiColor: .separator)
         /// Text/icons that sit on top of the accent colour.
         static let onAccent      = Color(hex: 0x16120D)
     }
 
     enum Radius {
-        static let card: CGFloat = 20
+        static let card: CGFloat = 14
         static let tile: CGFloat = 8
         static let control: CGFloat = 14
     }
@@ -27,12 +28,11 @@ enum GG {
     }
 
     enum Typography {
-        /// Elegant serif for branding and editorial headings only.
-        static func editorial(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-            .system(size: size, weight: weight, design: .serif)
+        /// Standard system heading (SF Pro). Kept as one helper so sizes stay consistent.
+        static func heading(_ size: CGFloat, weight: Font.Weight = .semibold) -> Font {
+            .system(size: size, weight: weight)
         }
-        static let caption = Font.system(.caption, design: .default)
-        static let eyebrow = Font.system(size: 11, weight: .semibold).smallCaps()
+        static let eyebrow = Font.footnote.weight(.semibold)
     }
 }
 
@@ -56,7 +56,7 @@ extension Color {
 
 /// User-selectable appearance. Dark is the default for the initial release.
 enum AppearancePreference: String, CaseIterable, Identifiable {
-    case dark, light, system
+    case system, dark, light
     var id: String { rawValue }
     var title: String {
         switch self {

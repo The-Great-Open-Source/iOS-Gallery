@@ -11,7 +11,7 @@ struct GGPrimaryButtonStyle: ButtonStyle {
             .padding(.vertical, 14)
             .padding(.horizontal, 22)
             .frame(maxWidth: fullWidth ? .infinity : nil)
-            .ggGlass(RoundedRectangle(cornerRadius: GG.Radius.control, style: .continuous), tint: GG.Palette.accent, interactive: true)
+            .background(GG.Palette.accent, in: RoundedRectangle(cornerRadius: GG.Radius.control, style: .continuous))
             .opacity(configuration.isPressed ? 0.85 : 1)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
             .animation(.snappy(duration: 0.18), value: configuration.isPressed)
@@ -27,7 +27,7 @@ struct GGSecondaryButtonStyle: ButtonStyle {
             .padding(.vertical, 14)
             .padding(.horizontal, 22)
             .frame(maxWidth: fullWidth ? .infinity : nil)
-            .ggGlass(RoundedRectangle(cornerRadius: GG.Radius.control, style: .continuous), interactive: true)
+            .background(GG.Palette.surface, in: RoundedRectangle(cornerRadius: GG.Radius.control, style: .continuous))
             .opacity(configuration.isPressed ? 0.8 : 1)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
             .animation(.snappy(duration: 0.18), value: configuration.isPressed)
@@ -45,20 +45,9 @@ struct PressableStyle: ButtonStyle {
 
 // MARK: - Layout pieces
 
-/// Deep base colour with soft ambient light, so glass surfaces have something to refract.
 struct GGBackground: View {
-    var body: some View {
-        ZStack {
-            GG.Palette.background
-            RadialGradient(colors: [GG.Palette.accent.opacity(0.20), .clear], center: .topLeading, startRadius: 0, endRadius: 420)
-            RadialGradient(colors: [Color(hex: 0x6F7FA8).opacity(0.14), .clear], center: .bottomTrailing, startRadius: 0, endRadius: 460)
-        }
-        .ignoresSafeArea()
-    }
-}
-
-struct GlassRowBackground: View {
-    var body: some View { Rectangle().fill(.ultraThinMaterial) }
+    var grouped = false
+    var body: some View { (grouped ? GG.Palette.grouped : GG.Palette.background).ignoresSafeArea() }
 }
 
 struct SectionHeader: View {
@@ -67,7 +56,7 @@ struct SectionHeader: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(GG.Typography.editorial(24))
+                .font(.title3.weight(.semibold))
                 .foregroundStyle(GG.Palette.text)
             Spacer()
             if let trailing {
@@ -86,14 +75,11 @@ struct EmptyStateView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            ZStack {
-                Color.clear.frame(width: 84, height: 84).ggGlass(Circle())
-                Image(systemName: icon)
-                    .font(.system(size: 30, weight: .light))
-                    .foregroundStyle(GG.Palette.accent)
-            }
+            Image(systemName: icon)
+                .font(.system(size: 44, weight: .light))
+                .foregroundStyle(.secondary)
             Text(title)
-                .font(GG.Typography.editorial(26))
+                .font(.title2.weight(.semibold))
                 .foregroundStyle(GG.Palette.text)
                 .multilineTextAlignment(.center)
             Text(message)
@@ -119,7 +105,7 @@ struct GGCard<Content: View>: View {
         content
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .ggGlass(RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
+            .background(GG.Palette.surface, in: RoundedRectangle(cornerRadius: GG.Radius.card, style: .continuous))
     }
 }
 
@@ -176,9 +162,9 @@ extension View {
     }
 
     /// Applies the Good Gallery screen background and hides default scroll backgrounds.
-    func ggScreen() -> some View {
+    func ggScreen(grouped: Bool = false) -> some View {
         self
-            .background(GGBackground())
+            .background(GGBackground(grouped: grouped))
             .scrollContentBackground(.hidden)
             .tint(GG.Palette.accent)
     }
