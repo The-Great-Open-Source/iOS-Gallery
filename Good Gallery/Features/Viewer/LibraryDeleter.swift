@@ -43,6 +43,15 @@ struct DeleteFromLibraryModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onAppear { configure() }
+            .overlay {
+                if deleter.isWorking {
+                    VStack(spacing: 10) { ProgressView(); Text("Deleting…").font(.footnote) }
+                        .padding(22)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.15), value: deleter.isWorking)
             .alert("Couldn't Delete", isPresented: Binding(get: { deleter.errorMessage != nil },
                                                            set: { if !$0 { deleter.errorMessage = nil } })) {
                 Button("OK", role: .cancel) {}
