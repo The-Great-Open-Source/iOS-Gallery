@@ -4,9 +4,9 @@ import SwiftData
 
 struct RootView: View {
     @EnvironmentObject private var library: PhotoLibrary
-    @AppStorage("appearance") private var appearanceRaw = AppearancePreference.system.rawValue
+    @AppStorage("appearance") var appearanceRaw = AppearancePreference.system.rawValue
 
-    private var appearance: AppearancePreference { AppearancePreference(rawValue: appearanceRaw) ?? .system }
+    var appearance: AppearancePreference { AppearancePreference(rawValue: appearanceRaw) ?? .system }
 
     var body: some View {
         Group {
@@ -17,11 +17,27 @@ struct RootView: View {
             }
         }
         .background(GGBackground())
-        .preferredColorScheme(appearance.colorScheme)
         .tint(GG.Palette.accent)
         .animation(.easeInOut(duration: 0.35), value: library.status)
+        .onAppear { applyAppearance() }
+        .onChange(of: appearanceRaw) { _, _ in applyAppearance() }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             library.refreshStatus()
+            applyAppearance()
+        }
+    }
+}
+
+extension RootView {
+    /// Overrides the style on every window so sheets and covers that are already on screen update too.
+    func applyAppearance() {
+        let style: UIUserInterfaceStyle = switch appearance {
+        case .system: .unspecified
+        case .dark: .dark
+        case .light: .light
+        }
+        for scene in UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }) {
+            for window in scene.windows { window.overrideUserInterfaceStyle = style }
         }
     }
 }
