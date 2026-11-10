@@ -35,6 +35,7 @@ struct FavoritesView: View {
         }
         .ggScreen()
         .navigationTitle("Favorites")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(selecting ? "Done" : "Select") {

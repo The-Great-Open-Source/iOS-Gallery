@@ -68,6 +68,7 @@ struct AlbumsView: View {
         }
         .ggScreen()
         .navigationTitle("Albums")
+        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: AlbumInfo.self) { AlbumDetailView(album: $0) }
         .task(id: library.changeToken) { await model.load() }
     }

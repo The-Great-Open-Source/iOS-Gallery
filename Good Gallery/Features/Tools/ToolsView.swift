@@ -19,6 +19,7 @@ struct ToolsView: View {
         .scrollContentBackground(.hidden)
         .background(GGBackground(grouped: true))
         .navigationTitle("Tools")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
