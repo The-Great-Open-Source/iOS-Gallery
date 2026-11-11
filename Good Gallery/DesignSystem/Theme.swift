@@ -8,12 +8,12 @@ enum GG {
         static let surface       = Color(uiColor: .secondarySystemBackground)
         static let elevated      = Color(uiColor: .tertiarySystemBackground)
         static let grouped       = Color(uiColor: .systemGroupedBackground)
-        static let accent        = Color(light: 0x9A7547, dark: 0xD6B48D)
+        static let accent        = Color(light: 0x0A66E0, dark: 0x4DA3FF)
         static let text          = Color.primary
         static let secondaryText = Color.secondary
         static let separator     = Color(uiColor: .separator)
         /// Text/icons that sit on top of the accent colour.
-        static let onAccent      = Color(hex: 0x16120D)
+        static let onAccent      = Color(hex: 0xFFFFFF)
     }
 
     enum Radius {
