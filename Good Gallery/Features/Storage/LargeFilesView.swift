@@ -49,7 +49,7 @@ final class LargeFilesModel: ObservableObject {
                 var top: [Item] = []
                 var sum: Int64 = 0
                 var sawSize = false
-                let keep = 200
+                let keep = 400
                 for index in 0..<total {
                     if Task.isCancelled { break }
                     let asset = fetch.object(at: index)
@@ -85,11 +85,22 @@ struct LargeFilesView: View {
 
     private struct CompressTarget: Identifiable, Hashable { let id: String }
 
+    @State private var over100MB = false
+    @State private var olderThanYear = false
+
+    private var hasActiveFilter: Bool { filter != .all || over100MB || olderThanYear }
+
     private var visible: [LargeFilesModel.Item] {
-        switch filter {
-        case .all: model.items
-        case .photos: model.items.filter { $0.asset.mediaType == .image }
-        case .videos: model.items.filter { $0.asset.mediaType == .video }
+        let yearAgo = Calendar.current.date(byAdding: .year, value: -1, to: .now) ?? .now
+        return model.items.filter { item in
+            switch filter {
+            case .all: break
+            case .photos: if item.asset.mediaType != .image { return false }
+            case .videos: if item.asset.mediaType != .video { return false }
+            }
+            if over100MB, item.bytes < 100_000_000 { return false }
+            if olderThanYear, (item.asset.creationDate ?? .distantFuture) >= yearAgo { return false }
+            return true
         }
     }
 
@@ -114,6 +125,10 @@ struct LargeFilesView: View {
                     row(item)
                         .tag(item.id)
                 }
+                if visible.isEmpty && !model.isScanning {
+                    Text(hasActiveFilter ? "Nothing matches these filters." : "No files found.")
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .environment(\.editMode, $editMode)
@@ -126,7 +141,14 @@ struct LargeFilesView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Picker("Show", selection: $filter) { ForEach(MediaFilter.allCases) { Text($0.rawValue).tag($0) } }
-                } label: { Image(systemName: filter == .all ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill") }
+                    Section {
+                        Toggle("Over 100 MB", isOn: $over100MB)
+                        Toggle("Older than a year", isOn: $olderThanYear)
+                    }
+                    if hasActiveFilter {
+                        Button("Clear Filters", role: .destructive) { filter = .all; over100MB = false; olderThanYear = false }
+                    }
+                } label: { Image(systemName: hasActiveFilter ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle") }
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button(editMode.isEditing ? "Done" : "Select") {
