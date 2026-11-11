@@ -2,7 +2,7 @@ import SwiftUI
 
 /// iPhone storage summary at the top of Library. Can be minimised; tapping it opens the largest files.
 struct StorageCard: View {
-    @AppStorage("storage.collapsed") private var collapsed = false
+    @State private var collapsed = true   // always starts minimised
     @State private var storage = DeviceStorage.current()
     @Environment(\.scenePhase) private var scenePhase
 
