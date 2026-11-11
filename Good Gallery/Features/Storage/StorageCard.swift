@@ -4,6 +4,7 @@ import SwiftUI
 struct StorageCard: View {
     @AppStorage("storage.collapsed") private var collapsed = false
     @State private var storage = DeviceStorage.current()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationLink(value: LibraryRoute.largeFiles) {
@@ -29,6 +30,7 @@ struct StorageCard: View {
         }
         .buttonStyle(PressableStyle())
         .onAppear { storage = DeviceStorage.current() }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { storage = DeviceStorage.current() } }
     }
 
     private var expanded: some View {
@@ -42,10 +44,12 @@ struct StorageCard: View {
             }
             .font(.footnote).foregroundStyle(.secondary)
             HStack(spacing: 4) {
-                Text("See largest files").font(.footnote.weight(.medium))
+                if storage.isLow { Image(systemName: "exclamationmark.triangle.fill").font(.footnote) }
+                Text(storage.isLow ? "Storage almost full · Free up space" : "See largest files")
+                    .font(.footnote.weight(.medium))
                 Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
             }
-            .foregroundStyle(GG.Palette.accent)
+            .foregroundStyle(storage.isLow ? Color.orange : GG.Palette.accent)
         }
         .padding(.trailing, 28)
     }
@@ -54,8 +58,10 @@ struct StorageCard: View {
         HStack(spacing: 12) {
             Image(systemName: "internaldrive").foregroundStyle(storage.isLow ? .orange : GG.Palette.accent)
             StorageBar(fraction: storage.usedFraction, isLow: storage.isLow).frame(maxWidth: 110)
-            Text("\(Format.bytes(storage.free)) free").font(.footnote).foregroundStyle(.secondary)
-            Spacer()
+            Text(storage.isLow ? "\(Format.bytes(storage.free)) free · Free up space" : "\(Format.bytes(storage.free)) free")
+                .font(.footnote).foregroundStyle(storage.isLow ? Color.orange : Color.secondary)
+                .lineLimit(1).minimumScaleFactor(0.8)
+            Spacer(minLength: 0)
         }
         .padding(.trailing, 36)
     }
